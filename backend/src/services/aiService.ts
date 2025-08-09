@@ -107,7 +107,7 @@ Format the response as valid JSON.
         analysisSummary: analysis.analysisSummary || 'Phân tích chi tiết về phù hợp nghề nghiệp.',
         strengths: analysis.strengths || ['Có động lực học tập'],
         recommendations: analysis.recommendations || ['Tiếp tục phát triển kỹ năng'],
-        confidenceScore: analysis.confidenceScore || 85,
+        confidenceScore: analysis.confidenceScore || 0.85,
         fullResponse: analysis
       };
 
@@ -193,7 +193,7 @@ Format the response as valid JSON.
       analysisSummary: `Dựa trên phân tích sở thích và kỹ năng của ${surveyData.name}, chúng tôi khuyến nghị các ngành học phù hợp với định hướng nghề nghiệp.`,
       strengths: ['Có động lực học tập', 'Quan tâm đến tương lai'],
       recommendations: ['Tiếp tục phát triển kỹ năng chuyên môn', 'Tham gia các hoạt động thực hành'],
-      confidenceScore: 80,
+      confidenceScore: 0.8,
       fullResponse: {
         timestamp: new Date().toISOString()
       }
@@ -240,6 +240,13 @@ Trả lời bằng tiếng Việt, thân thiện và hữu ích.
   private generateFallbackChatResponse(message: string): string {
     // Normalize Vietnamese characters and convert to lowercase
     const msg = message.toLowerCase().normalize('NFC');
+    
+    // Advanced template-based pattern matching
+    const templateResponse = this.matchPromptTemplates(msg);
+    
+    if (templateResponse && templateResponse.confidence >= 0.5) {
+      return templateResponse.response;
+    }
     
     // Advanced contextual pattern matching with confidence scoring
     const contextualResponses = this.analyzeContextualPatterns(msg);
@@ -916,6 +923,240 @@ Mỗi tính cách sẽ phù hợp với những ngành khác nhau! 🚀`,
     return encouragements[Math.floor(Math.random() * encouragements.length)];
   }
 
+  // Advanced template-based pattern matching system
+  private matchPromptTemplates(message: string): {response: string, confidence: number} | null {
+    const templates = this.getPromptTemplates();
+    let bestMatch: {response: string, confidence: number} | null = null;
+    let maxConfidence = 0;
+
+    console.log(`🔍 Template matching for: "${message}"`);
+
+    for (const category in templates) {
+      const template = templates[category];
+      const match = this.matchTemplate(message, template);
+      
+      if (match) {
+        console.log(`📋 Category "${category}" matched with confidence: ${match.confidence}`);
+      }
+      
+      if (match && match.confidence > maxConfidence) {
+        maxConfidence = match.confidence;
+        bestMatch = match;
+        console.log(`🎯 New best match: ${category} (${match.confidence})`);
+      }
+    }
+
+    if (bestMatch) {
+      console.log(`✅ Final match: confidence ${bestMatch.confidence}`);
+    } else {
+      console.log(`❌ No template match found`);
+    }
+
+    return bestMatch;
+  }
+
+  // Match specific template patterns
+  private matchTemplate(message: string, template: any): {response: string, confidence: number} | null {
+    let bestMatch: {response: string, confidence: number} | null = null;
+    let maxScore = 0;
+
+    // Handle different template types
+    if (template.patterns && Array.isArray(template.patterns)) {
+      // Simple pattern matching
+      for (const pattern of template.patterns) {
+        const score = this.calculateTemplateScore(message, pattern, template);
+        if (score > maxScore) {
+          maxScore = score;
+          bestMatch = {
+            response: this.generateTemplateResponse(pattern, template, message),
+            confidence: score
+          };
+        }
+      }
+    }
+
+    // Handle variable patterns (e.g., {subject}, {major})
+    if (template.subjects || template.activities || template.majors || template.skills) {
+      const variableMatch = this.matchVariablePatterns(message, template);
+      if (variableMatch && variableMatch.confidence > maxScore) {
+        bestMatch = variableMatch;
+      }
+    }
+
+    return bestMatch;
+  }
+
+  // Calculate template matching score
+  private calculateTemplateScore(message: string, pattern: string, template: any): number {
+    // Remove variable placeholders for basic matching
+    const cleanPattern = pattern.replace(/\{[^}]+\}/g, '').trim();
+    const keywords = cleanPattern.split(' ').filter(word => word.length > 2);
+    
+    let score = 0;
+    let matches = 0;
+
+    // Check for exact pattern match first
+    if (message.includes(cleanPattern)) {
+      return 0.95; // Very high confidence for exact matches
+    }
+
+    // Check individual keywords
+    for (const keyword of keywords) {
+      if (message.includes(keyword)) {
+        matches++;
+        score += 0.15;
+      }
+    }
+
+    // Boost for partial phrase matches
+    const words = cleanPattern.split(' ');
+    let phraseMatches = 0;
+    for (const word of words) {
+      if (word.length > 2 && message.includes(word)) {
+        phraseMatches++;
+      }
+    }
+    
+    if (phraseMatches >= words.length * 0.6) {
+      score += 0.4; // Boost for partial phrase match
+    }
+
+    // Normalize score
+    return Math.min(score, 1.0);
+  }
+
+  // Match patterns with variables like {subject}, {major}
+  private matchVariablePatterns(message: string, template: any): {response: string, confidence: number} | null {
+    let bestMatch: {response: string, confidence: number} | null = null;
+    let maxConfidence = 0;
+
+    // Academic subjects matching
+    if (template.subjects && template.responses) {
+      for (const subject of template.subjects) {
+        if (message.includes(subject)) {
+          for (const pattern of template.patterns) {
+            const filledPattern = pattern.replace('{subject}', subject);
+            const score = this.calculatePatternMatch(message, filledPattern);
+            
+            if (score > maxConfidence) {
+              maxConfidence = score;
+              const responses = template.responses[subject] || template.responses.default || [];
+              if (responses.length > 0) {
+                bestMatch = {
+                  response: responses[Math.floor(Math.random() * responses.length)],
+                  confidence: score
+                };
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Career interests matching
+    if (template.activities) {
+      for (const category in template.activities) {
+        const activities = template.activities[category];
+        for (const activity of activities) {
+          if (message.includes(activity)) {
+            maxConfidence = Math.max(maxConfidence, 0.75);
+            bestMatch = {
+              response: this.generateInterestResponse(category, activity),
+              confidence: maxConfidence
+            };
+          }
+        }
+      }
+    }
+
+    // Salary questions matching
+    if (template.patterns && template.responses && template.responses.detailed_salary) {
+      const salaryKeywords = ['lương', 'thu nhập', 'mức lương', 'kiếm được', 'tiền'];
+      const matchCount = salaryKeywords.filter(keyword => message.includes(keyword)).length;
+      
+      if (matchCount >= 1) {
+        maxConfidence = 0.8;
+        bestMatch = {
+          response: template.responses.detailed_salary,
+          confidence: maxConfidence
+        };
+      }
+    }
+
+    // Skill concerns matching
+    if (template.skills && template.responses) {
+      for (const skillCategory in template.skills) {
+        const skillWords = template.skills[skillCategory];
+        for (const skill of skillWords) {
+          if (message.includes(skill)) {
+            for (const pattern of template.patterns) {
+              const filledPattern = pattern.replace('{skill}', skill);
+              const score = this.calculatePatternMatch(message, filledPattern);
+              
+              if (score > maxConfidence && template.responses[skillCategory]) {
+                maxConfidence = score;
+                bestMatch = {
+                  response: template.responses[skillCategory],
+                  confidence: score
+                };
+              }
+            }
+          }
+        }
+      }
+    }
+
+    return bestMatch;
+  }
+
+  // Calculate pattern matching score
+  private calculatePatternMatch(message: string, pattern: string): number {
+    const patternWords = pattern.toLowerCase().split(' ');
+    const messageWords = message.split(' ');
+    
+    let matches = 0;
+    for (const word of patternWords) {
+      if (word.length > 2 && messageWords.some(mWord => mWord.includes(word))) {
+        matches++;
+      }
+    }
+    
+    return matches / patternWords.length;
+  }
+
+  // Generate response based on career interests
+  private generateInterestResponse(category: string, activity: string): string {
+    const responses: {[key: string]: string} = {
+      'technology': `💻 **Bạn thích ${activity}? Tuyệt vời!**\n\n🎯 **Ngành phù hợp:**\n• Công nghệ thông tin\n• Lập trình phần mềm\n• Thiết kế UI/UX\n• Data Science\n\n🚀 **Cơ hội nghề nghiệp:**\n• Developer: 15-50 triệu\n• System Admin: 12-35 triệu\n• Tech Lead: 30-80 triệu\n\n💡 **Lời khuyên:** Hãy bắt đầu học một ngôn ngữ lập trình như Python hoặc JavaScript!`,
+      
+      'design': `🎨 **Graphic Design Career - Đam mê ${activity}? Tài năng thiên bẩm!**\n\n🎯 **Ngành phù hợp:**\n• Thiết kế đồ họa (Graphic Design)\n• UI/UX Design\n• Motion Graphics\n• Brand Design\n\n🚀 **Cơ hội nghề nghiệp:**\n• Graphic Designer: 8-25 triệu\n• UI/UX Designer: 12-35 triệu\n• Creative Director: 25-60 triệu\n\n💡 **Lời khuyên:** Thử học Photoshop, Illustrator hoặc Figma để khám phá tài năng!`,
+      
+      'business': `📈 **Quan tâm ${activity}? Tinh thần entrepreneur!**\n\n🎯 **Ngành phù hợp:**\n• Marketing Digital\n• Quản trị kinh doanh\n• E-commerce\n• Business Development\n\n🚀 **Cơ hội nghề nghiệp:**\n• Marketing Executive: 8-20 triệu\n• Business Analyst: 12-30 triệu\n• Marketing Manager: 20-50 triệu\n\n💡 **Lời khuyên:** Tìm hiểu về Digital Marketing và Social Media trends!`,
+      
+      'communication': `🗣️ **Giỏi ${activity}? Tài năng hiếm!**\n\n🎯 **Ngành phù hợp:**\n• Marketing & Communication\n• Public Relations\n• Content Creation\n• Sales & Customer Service\n\n🚀 **Cơ hội nghề nghiệp:**\n• Content Creator: 8-25 triệu\n• PR Specialist: 10-30 triệu\n• Sales Manager: 15-45 triệu\n\n💡 **Lời khuyên:** Phát triển kỹ năng viết content và presentation!`,
+      
+      'helping': `🤝 **Thích ${activity}? Trái tim nhân ái!**\n\n🎯 **Ngành phù hợp:**\n• Customer Service\n• Human Resources\n• Training & Development\n• Social Work\n\n🚀 **Cơ hội nghề nghiệp:**\n• HR Specialist: 8-22 triệu\n• Training Manager: 12-30 triệu\n• Customer Success: 10-25 triệu\n\n💡 **Lời khuyên:** Phát triển soft skills và emotional intelligence!`
+    };
+
+    return responses[category] || `🌟 **Tuyệt vời khi bạn quan tâm đến ${activity}!**\n\nHãy cho tôi biết thêm về sở thích của bạn để tư vấn cụ thể hơn nhé! 😊`;
+  }
+
+  // Generate template-based response
+  private generateTemplateResponse(pattern: string, template: any, message: string): string {
+    if (template.responses) {
+      if (Array.isArray(template.responses)) {
+        return template.responses[Math.floor(Math.random() * template.responses.length)];
+      }
+      
+      // Handle object responses
+      for (const key in template.responses) {
+        return template.responses[key];
+      }
+    }
+    
+    return "Tôi hiểu câu hỏi của bạn. Hãy cho tôi biết thêm chi tiết để tư vấn tốt hơn nhé! 😊";
+  }
+
   // Comprehensive contextual pattern analysis with confidence scoring
   private analyzeContextualPatterns(message: string): Array<{response: string, confidence: number, category: string}> {
     const responses: Array<{response: string, confidence: number, category: string}> = [];
@@ -1031,9 +1272,545 @@ Mỗi tính cách sẽ phù hợp với những ngành khác nhau! 🚀`,
     return responses[Math.floor(Math.random() * responses.length)];
   }
 
-  // Comprehensive pattern definitions
+  // Comprehensive prompt templates for maximum coverage
+  private getPromptTemplates(): {[key: string]: any} {
+    return {
+      // Academic performance concerns
+      'academic_weakness': {
+        patterns: [
+          'dốt {subject}', 'kém {subject}', 'yếu {subject}', 'không giỏi {subject}', '{subject} dở',
+          'học dốt {subject}', '{subject} không tốt', 'yếu về {subject}', '{subject} kém',
+          'không khá {subject}', '{subject} không khỏe', 'chưa giỏi {subject}'
+        ],
+        subjects: ['toán', 'văn', 'anh', 'lý', 'hóa', 'sinh', 'sử', 'địa', 'gdcd'],
+        responses: {
+          'toán': [
+            '🤔 **Dốt toán vẫn có thể thành công!**\n\n✅ **Thực tế:** 70% công việc hiện đại chỉ cần toán cơ bản\n• Logic tư duy quan trọng hơn tính toán\n• Có công cụ hỗ trợ mọi phép tính\n• Nhiều CEO tech không giỏi toán\n\n🎯 **Ngành phù hợp:**\n• Frontend Development\n• UI/UX Design\n• Content Marketing\n• Social Media Management\n\n💡 **Bí quyết:** Tập trung phát triển tư duy logic thay vì lo lắng về toán!',
+            '💻 **Toán kém không cản trở sự nghiệp!**\n\n🌟 **Ví dụ thành công:**\n• Jack Dorsey (Twitter): Không xuất thân toán học\n• Jan Koum (WhatsApp): Tự học lập trình\n• David Karp (Tumblr): Bỏ học sớm\n\n🧠 **Kỹ năng thay thế:**\n• Creativity & Innovation\n• Problem-solving skills\n• Communication & Teamwork\n• Persistence & Learning ability\n\n🚀 **Lộ trình gợi ý:**\n1. Bắt đầu với HTML/CSS\n2. Học JavaScript từ cơ bản\n3. Build projects thực tế\n4. Join coding communities'
+          ],
+          'văn': [
+            '📝 **Văn kém vẫn có cơ hội tốt!**\n\n✅ **Ngành không cần văn giỏi:**\n• Công nghệ thông tin\n• Thiết kế đồ họa\n• Kỹ thuật & Công nghệ\n• Data Analysis\n\n🎯 **Tuy nhiên nên cải thiện:**\n• Kỹ năng viết email chuyên nghiệp\n• Presentation skills\n• Documentation skills\n\n💡 **Tips:** Focus vào technical skills, văn có thể học dần!'
+          ]
+        }
+      },
+
+      // Career interest exploration
+      'career_interests': {
+        patterns: [
+          'thích {activity}', 'yêu {activity}', 'đam mê {activity}', 'quan tâm {activity}',
+          'muốn làm {activity}', 'ước mơ {activity}', 'mong muốn {activity}'
+        ],
+        activities: {
+          'technology': ['máy tính', 'công nghệ', 'lập trình', 'code', 'phần mềm', 'app', 'website', 'game'],
+          'design': ['thiết kế', 'vẽ', 'màu sắc', 'nghệ thuật', 'sáng tạo', 'đồ họa', 'hình ảnh'],
+          'business': ['kinh doanh', 'bán hàng', 'marketing', 'quản lý', 'lãnh đạo', 'khởi nghiệp'],
+          'communication': ['giao tiếp', 'nói chuyện', 'thuyết trình', 'viết', 'truyền thông'],
+          'helping': ['giúp đỡ', 'hỗ trợ', 'tư vấn', 'dạy học', 'chăm sóc', 'phục vụ']
+        }
+      },
+
+      // Financial concerns
+      'financial_situations': {
+        patterns: [
+          'gia đình nghèo', 'không có tiền', 'kinh tế khó khăn', 'hoàn cảnh khó khăn',
+          'không đủ tiền', 'học phí cao', 'tài chính hạn chế', 'nghèo', 'khó khăn tài chính'
+        ],
+        responses: [
+          '💰 **Đừng để tài chính cản trở ước mơ!**\n\n🎓 **Học bổng FPT Polytechnic:**\n• 100% học phí: Học sinh xuất sắc\n• 50-75% học phí: Hoàn cảnh khó khăn\n• 25-50% học phí: Thành tích tốt\n\n💳 **Hỗ trợ tài chính:**\n• Trả góp 0% lãi suất\n• Vay vốn ưu đãi\n• Part-time jobs tại trường\n• Thực tập có lương từ năm 2\n\n📞 **Liên hệ ngay:** 1900-6969 để biết chi tiết!'
+        ]
+      },
+
+      // Age-related concerns
+      'age_concerns': {
+        patterns: [
+          'tuổi {age}', '{age} tuổi', 'đã {age}', 'bây giờ mới {age}',
+          'muộn màng', 'già rồi', 'trẻ quá', 'nhỏ tuổi', 'lớn tuổi'
+        ],
+        responses: {
+          'young': '🌱 **Tuổi trẻ là lợi thế!**\n\n✅ **Ưu điểm:**\n• Học nhanh, thích nghi tốt\n• Năng lượng và nhiệt huyết\n• Thời gian dài để phát triển\n• Dễ tiếp thu công nghệ mới\n\n🎯 **Gợi ý:** Hãy tận dụng thời gian để build foundation vững chắc!',
+          'older': '🎯 **Học không bao giờ là quá muộn!**\n\n✅ **Ưu điểm người lớn tuổi:**\n• Kinh nghiệm sống phong phú\n• Mục tiêu rõ ràng\n• Kỷ luật và kiên nhẫn\n• Kỹ năng giao tiếp tốt\n\n🌟 **Nhiều người thành công học nghề sau 25, 30 tuổi!**'
+        }
+      },
+
+      // Gender-related concerns
+      'gender_concerns': {
+        patterns: [
+          'con gái', 'nữ', 'phụ nữ', 'girl', 'female', 'con trai', 'nam', 'boy', 'male'
+        ],
+        responses: {
+          'female_tech': '👩‍💻 **Nữ giới trong Tech - Xu hướng tích cực!**\n\n📈 **Thống kê khích lệ:**\n• 40% sinh viên IT tại FPT là nữ\n• Nữ developer có mức lương cạnh tranh\n• Nhiều nữ CEO công nghệ thành công\n\n🌟 **Ưu điểm của nữ giới:**\n• Tỉ mỉ và cẩn thận\n• Giao tiếp và teamwork tốt\n• UI/UX design xuất sắc\n• Project management hiệu quả\n\n💪 **Role models:** Sheryl Sandberg (Meta), Susan Wojcicki (YouTube), Ginni Rometty (IBM)',
+          'female_design': '🎨 **Thiết kế - Lĩnh vực nữ giới tỏa sáng!**\n\n✨ **Thế mạnh tự nhiên:**\n• Cảm thẩm mỹ tinh tế\n• Chi tiết và màu sắc\n• Hiểu tâm lý người dùng\n• Creativity không giới hạn\n\n🏆 **Cơ hội nghề nghiệp:**\n• UI/UX Designer (hot nhất)\n• Brand Designer\n• Creative Director\n• Fashion Designer'
+        }
+      },
+
+      // Major comparison questions
+      'major_comparisons': {
+        patterns: [
+          'so sánh {major1} và {major2}', '{major1} hay {major2}',
+          'khác nhau giữa {major1} và {major2}', 'nên chọn {major1} hay {major2}',
+          'giống nhau {major1} {major2}'
+        ],
+        majors: {
+          'it': ['công nghệ thông tin', 'it', 'lập trình', 'phần mềm'],
+          'design': ['thiết kế', 'đồ họa', 'design'],
+          'business': ['kinh doanh', 'marketing', 'quản trị'],
+          'engineering': ['kỹ thuật', 'cơ khí', 'điện tử']
+        }
+      },
+
+      // Salary and career prospects
+      'salary_questions': {
+        patterns: [
+          'lương {major}', 'thu nhập {major}', 'mức lương {major}',
+          'kiếm được bao nhiều', 'lương khởi điểm', 'lương tối đa',
+          'có giàu không', 'làm giàu được không'
+        ],
+        responses: {
+          'detailed_salary': '💰 **Mức lương chi tiết theo ngành (2024):**\n\n**🖥️ Công nghệ thông tin:**\n• Fresher: 8-15 triệu\n• Junior (1-2 năm): 15-25 triệu\n• Senior (3-5 năm): 25-45 triệu\n• Lead/Manager (5+ năm): 45-80 triệu\n\n**🎨 Thiết kế đồ họa:**\n• Fresher: 6-12 triệu\n• Junior: 12-20 triệu\n• Senior: 20-35 triệu\n• Art Director: 35-60 triệu\n\n**📈 Marketing:**\n• Fresher: 7-13 triệu\n• Executive: 13-22 triệu\n• Manager: 22-40 triệu\n• Director: 40-70 triệu'
+        }
+      },
+
+      // Admission and enrollment
+      'admission_questions': {
+        patterns: [
+          'điều kiện tuyển sinh', 'tuyển sinh', 'đăng ký', 'xét tuyển',
+          'hồ sơ', 'thủ tục', 'deadline', 'hạn nộp', 'khi nào nộp'
+        ]
+      },
+
+      // Learning difficulty concerns
+      'learning_concerns': {
+        patterns: [
+          'có khó không', 'khó học không', 'dễ hay khó', 'học có nặng không',
+          'áp lực không', 'stress không', 'theo kịp không'
+        ]
+      },
+
+      // Future prospects
+      'future_questions': {
+        patterns: [
+          'tương lai', 'triển vọng', 'xu hướng', 'phát triển', 'cơ hội',
+          'có tốt không', 'có nên không', 'có ổn không'
+        ]
+      },
+
+      // Specific skill concerns
+      'skill_concerns': {
+        patterns: [
+          'không biết {skill}', 'chưa biết {skill}', 'không giỏi {skill}',
+          'không có kinh nghiệm {skill}', 'mới bắt đầu {skill}'
+        ],
+        skills: {
+          'programming': ['lập trình', 'code', 'coding', 'program'],
+          'drawing': ['vẽ', 'draw', 'drawing', 'sketching'],
+          'english': ['tiếng anh', 'english', 'anh văn'],
+          'computer': ['máy tính', 'computer', 'tin học']
+        },
+        responses: {
+          'programming': '💻 **Chưa biết lập trình? Không sao cả!**\n\n🌟 **95% sinh viên IT bắt đầu từ con số 0**\n\n🎯 **Lộ trình cho người mới:**\n1. HTML/CSS (2-3 tuần)\n2. JavaScript cơ bản (1-2 tháng)\n3. Framework (React/Vue) (2-3 tháng)\n4. Backend basics (Node.js/Python)\n\n💡 **Tài nguyên học free:**\n• Codecademy, freeCodeCamp\n• YouTube channels (Traversy Media)\n• FPT có lab thực hành 24/7\n\n🚀 **Tip:** Làm project nhỏ mỗi tuần!',
+          'drawing': '🎨 **Không biết vẽ? Thiết kế hiện đại khác hoàn toàn!**\n\n✅ **Thực tế:**\n• 80% designer làm việc trên máy tính\n• AI tools hỗ trợ tạo ý tưởng\n• Template và asset library phong phú\n\n🛠️ **Kỹ năng quan trọng hơn:**\n• Cảm thẩm mỹ (có thể rèn luyện)\n• Hiểu xu hướng màu sắc\n• Tư duy user experience\n• Kỹ năng sử dụng Photoshop/Figma\n\n💡 **Bắt đầu:** Học Canva → Photoshop → Illustrator',
+          'english': '🌍 **Tiếng Anh yếu? Vẫn có nhiều cơ hội!**\n\n✅ **Ngành ít cần tiếng Anh:**\n• Thiết kế đồ họa (chủ yếu visual)\n• Marketing nội địa\n• Kỹ thuật/Sửa chữa\n• Sales B2B Việt Nam\n\n📈 **Tuy nhiên nên cải thiện:**\n• Lương cao hơn 30-50% khi giỏi Anh\n• Cơ hội remote work quốc tế\n• Học tài liệu mới nhất\n\n💡 **Học Anh hiệu quả:** Duolingo + YouTube + practice với AI chatbot'
+        }
+      },
+
+      // Location and accessibility concerns
+      'location_concerns': {
+        patterns: [
+          'xa nhà', 'xa trường', 'ở tỉnh', 'nông thôn', 'miền quê',
+          'có cơ sở ở {location}', 'học ở đâu', 'gần nhà'
+        ],
+        responses: [
+          '🏫 **FPT Polytechnic có 13+ cơ sở toàn quốc!**\n\n📍 **Các thành phố lớn:**\n• Hà Nội (2 cơ sở)\n• TP.HCM (3 cơ sở)\n• Đà Nẵng, Cần Thơ\n• Hải Phòng, Quy Nhon\n• Tây Nguyên, Tây Nam Bộ\n\n🏠 **Hỗ trợ sinh viên xa nhà:**\n• Ký túc xá hiện đại\n• Hỗ trợ tìm phòng trọ\n• Học bổng xa nhà\n• Cộng đồng sinh viên thân thiện\n\n💡 **Lợi ích học xa nhà:** Trưởng thành, độc lập, networking rộng!'
+        ]
+      },
+
+      // Family pressure and expectations
+      'family_pressure': {
+        patterns: [
+          'gia đình không đồng ý', 'bố mẹ không cho', 'gia đình muốn học {major}',
+          'áp lực gia đình', 'theo ý bố mẹ', 'gia đình ép buộc'
+        ],
+        responses: [
+          '👨‍👩‍👧‍👦 **Xử lý áp lực gia đình thông minh:**\n\n🤝 **Chiến lược thuyết phục:**\n• Chuẩn bị số liệu cụ thể (lương, cơ hội việc làm)\n• Tìm examples thành công trong ngành\n• Đề xuất thời gian thử nghiệm (1 năm)\n• Cam kết học tập nghiêm túc\n\n📊 **Thông tin thuyết phục:**\n• Tỷ lệ việc làm FPT: 98%\n• Lương khởi điểm: 12-15 triệu\n• Đối tác 500+ doanh nghiệp\n• Xu hướng công nghệ 4.0\n\n💡 **Tip:** Mời bố mẹ tham quan trường, gặp tư vấn viên!'
+        ]
+      },
+
+      // Health and physical concerns
+      'health_concerns': {
+        patterns: [
+          'cận thị', 'mắt kém', 'không khỏe', 'yếu sức khỏe',
+          'ngồi lâu có sao không', 'ảnh hưởng sức khỏe'
+        ],
+        responses: [
+          '👓 **Sức khỏe quan trọng nhất!**\n\n✅ **Ngành thân thiện sức khỏe:**\n• Marketing (ít ngồi máy tính)\n• Business Development (di chuyển nhiều)\n• Event Management\n• Sales & Customer Relations\n\n💻 **Nếu chọn IT/Design:**\n• Màn hình chống ánh sáng xanh\n• Nghỉ giải lao 15p/2h\n• Bài tập mắt đơn giản\n• Ergonomic workspace\n\n🏃‍♂️ **Tips:** Yoga, gym, thể thao đều đặn. Nhiều dev giỏi cũng là vận động viên!'
+        ]
+      },
+
+      // Time management and study schedule
+      'time_concerns': {
+        patterns: [
+          'không có thời gian', 'bận việc nhà', 'phải làm thêm',
+          'học part-time', 'học tối', 'học cuối tuần'
+        ],
+        responses: [
+          '⏰ **Linh hoạt thời gian học tập!**\n\n📅 **Lịch học đa dạng:**\n• Sáng: 7h-11h\n• Chiều: 13h-17h\n• Tối: 18h-21h\n• Cuối tuần: Có lớp bổ sung\n\n💼 **Hỗ trợ sinh viên đi làm:**\n• Học online cho một số môn\n• Ghi âm bài giảng\n• Tài liệu số đầy đủ\n• Hỗ trợ học bù\n\n🎯 **Time management tips:** Pomodoro technique, priority matrix, batch learning!'
+        ]
+      },
+
+      // Technology and equipment concerns
+      'equipment_concerns': {
+        patterns: [
+          'không có laptop', 'máy tính cũ', 'cấu hình yếu',
+          'không có thiết bị', 'máy chậm', 'cần gì để học'
+        ],
+        responses: [
+          '💻 **Thiết bị không phải rào cản!**\n\n🏫 **Cơ sở vật chất FPT:**\n• Lab máy tính 24/7\n• Cấu hình cao (i7, 16GB RAM)\n• Phần mềm bản quyền đầy đủ\n• WiFi tốc độ cao\n\n💡 **Gợi ý mua máy:**\n• Laptop cũ i5 (8-12 triệu)\n• Trả góp 0% qua trường\n• Second-hand từ sinh viên cũ\n\n🎯 **Ưu tiên:** Đầu tư kiến thức trước, thiết bị sau!'
+        ]
+      },
+
+      // Career change and switching fields
+      'career_change': {
+        patterns: [
+          'chuyển ngành', 'đã làm việc', 'đổi nghề', 'career switch',
+          'bỏ nghề cũ', 'học lại từ đầu', 'muộn màng'
+        ],
+        responses: [
+          '🔄 **Career Switch - Xu hướng thời đại!**\n\n📈 **Thống kê khích lệ:**\n• 50% người thành công đổi nghề ít nhất 1 lần\n• Tuổi trung bình chuyển nghề: 27-35\n• IT có 40% người chuyển từ ngành khác\n\n✅ **Ưu điểm của career switcher:**\n• Kinh nghiệm đa ngành\n• Soft skills tốt hơn\n• Mục tiêu rõ ràng\n• Network rộng\n\n💡 **Success stories:** Nhiều CEO tech bắt đầu từ marketing, tài chính, giáo dục!'
+        ]
+      },
+
+      // Academic performance and grades
+      'academic_performance': {
+        patterns: [
+          'điểm kém', 'học yếu', 'điểm thấp', 'không đủ điểm', 'điểm liệt',
+          'học lực trung bình', 'điểm trung bình', 'gpa thấp', 'xếp loại yếu'
+        ],
+        responses: [
+          '📚 **Điểm số không quyết định tất cả!**\n\n🌟 **Sự thật khích lệ:**\n• Steve Jobs có GPA 2.65/4.0\n• Richard Branson bỏ học lúc 16 tuổi\n• 40% CEO Fortune 500 không phải sinh viên xuất sắc\n\n💡 **Điều quan trọng hơn điểm số:**\n• Passion & motivation\n• Practical skills\n• Communication & teamwork\n• Problem-solving ability\n\n🎯 **Ngành phù hợp với học lực trung bình:**\n• Creative fields (Design, Content)\n• Sales & Marketing\n• Entrepreneurship\n• Technical skills (coding, digital)'
+        ]
+      },
+
+      // Learning difficulties and disabilities
+      'learning_difficulties': {
+        patterns: [
+          'khó học', 'chậm hiểu', 'khó tiếp thu', 'học kém', 'không thông minh',
+          'adhd', 'tự kỷ', 'dyslexia', 'khó tập trung', 'hay quên'
+        ],
+        responses: [
+          '🧠 **Mỗi não bộ đều độc đáo và tài năng!**\n\n✨ **Những thiên tài có learning differences:**\n• Albert Einstein - Autism spectrum\n• Richard Branson - Dyslexia\n• Temple Grandin - Autism\n• Cher - Dyslexia\n\n🎯 **Ngành phù hợp:**\n• Visual arts & Design\n• Music & Performing arts\n• Hands-on technical work\n• Entrepreneurship\n• Animal care & veterinary\n\n💪 **Chiến lược học tập:**\n• Visual learning methods\n• Break tasks into small steps\n• Use technology aids\n• Focus on strengths, not weaknesses'
+        ]
+      },
+
+      // Study methods and learning styles
+      'study_methods': {
+        patterns: [
+          'cách học', 'phương pháp học', 'học như thế nào', 'học hiệu quả',
+          'không biết học', 'học mãi không nhớ', 'cách ghi nhớ'
+        ],
+        responses: [
+          '📖 **Tìm phương pháp học phù hợp với bạn!**\n\n🧠 **4 kiểu học tập chính:**\n• **Visual** (70%): Sơ đồ, hình ảnh, màu sắc\n• **Auditory** (20%): Nghe giảng, thảo luận\n• **Kinesthetic** (10%): Thực hành, làm việc tay\n• **Reading/Writing**: Ghi chép, đọc sách\n\n🎯 **Techniques hiệu quả:**\n• **Pomodoro**: 25 phút học + 5 phút nghỉ\n• **Spaced repetition**: Ôn lại theo chu kỳ\n• **Active recall**: Tự test kiến thức\n• **Feynman technique**: Giải thích cho người khác\n\n💡 **Pro tips:** Tìm môi trường học phù hợp, tạo habit tracker!'
+        ]
+      },
+
+      // Personality types and career matching
+      'personality_career': {
+        patterns: [
+          'hướng nội', 'hướng ngoại', 'introvert', 'extrovert', 'nhút nhát',
+          'thích một mình', 'thích đông người', 'tính cách', 'mbti'
+        ],
+        responses: [
+          '🎭 **Tính cách định hướng nghề nghiệp!**\n\n🤫 **Hướng nội (Introvert) - 40% dân số:**\n• **Strengths**: Suy nghĩ sâu, tập trung cao, độc lập\n• **Suitable careers**: Developer, Designer, Writer, Researcher, Analyst\n• **Work environment**: Quiet spaces, deep work, small teams\n\n🗣️ **Hướng ngoại (Extrovert) - 60% dân số:**\n• **Strengths**: Giao tiếp tốt, năng lượng cao, team work\n• **Suitable careers**: Sales, Marketing, HR, Teaching, Management\n• **Work environment**: Open spaces, meetings, networking\n\n🌟 **Ambivert (Cả hai):**\n• Most flexible and adaptable\n• Great for leadership roles\n• Can switch between modes as needed'
+        ]
+      },
+
+      // Industry trends and future jobs
+      'future_trends': {
+        patterns: [
+          'tương lai', 'xu hướng', 'ngành hot', 'công nghệ mới', 'ai thay thế',
+          '2030', '2025', 'automation', 'robot', 'ngành sẽ mất'
+        ],
+        responses: [
+          '🚀 **Nghề nghiệp tương lai 2025-2030!**\n\n📈 **Top trending careers:**\n• **AI/ML Engineer** - 40% growth\n• **Data Scientist** - 35% growth\n• **Cybersecurity** - 33% growth\n• **UX/UI Designer** - 30% growth\n• **Digital Marketing** - 25% growth\n• **Healthcare Tech** - 20% growth\n\n⚠️ **Ngành có nguy cơ:**\n• Basic data entry\n• Simple manufacturing\n• Basic customer service\n• Routine accounting\n\n💡 **Skills không thể thay thế:**\n• Creative thinking\n• Emotional intelligence\n• Complex problem solving\n• Human interaction & empathy'
+        ]
+      },
+
+      // Internships and practical experience
+      'internship_experience': {
+        patterns: [
+          'thực tập', 'internship', 'kinh nghiệm', 'chưa có kinh nghiệm',
+          'tìm việc thực tập', 'học và làm', 'part-time'
+        ],
+        responses: [
+          '💼 **Thực tập - Cửa ngõ vào nghề!**\n\n🎯 **Tại sao cần thực tập:**\n• 85% nhà tuyển dụng ưu tiên có kinh nghiệm\n• Networking với professionals\n• Hiểu rõ công việc thực tế\n• Có thể được offer full-time\n\n📍 **Nơi tìm thực tập:**\n• **LinkedIn** - Professional network\n• **Vietnamworks** - Job portal\n• **Company websites** - Direct application\n• **University career center**\n• **Startup events & meetups**\n\n💡 **Tips thành công:**\n• Apply sớm (trước 2-3 tháng)\n• Customize CV cho từng vị trí\n• Prepare portfolio/demo projects\n• Follow up after interview'
+        ]
+      },
+
+      // Soft skills and personal development
+      'soft_skills': {
+        patterns: [
+          'kỹ năng mềm', 'soft skills', 'giao tiếp', 'thuyết trình', 'làm việc nhóm',
+          'leadership', 'quản lý thời gian', 'tự tin', 'presentation'
+        ],
+        responses: [
+          '🌟 **Soft Skills - Chìa khóa thành công!**\n\n🔝 **Top 10 soft skills 2024:**\n1. **Communication** - Giao tiếp hiệu quả\n2. **Problem-solving** - Giải quyết vấn đề\n3. **Adaptability** - Thích ứng thay đổi\n4. **Teamwork** - Làm việc nhóm\n5. **Time management** - Quản lý thời gian\n6. **Leadership** - Khả năng lãnh đạo\n7. **Critical thinking** - Tư duy phản biện\n8. **Emotional intelligence** - Thông minh cảm xúc\n9. **Creativity** - Sáng tạo\n10. **Digital literacy** - Am hiểu công nghệ\n\n💪 **Cách phát triển:**\n• Join clubs & organizations\n• Volunteer work\n• Online courses (Coursera, Udemy)\n• Practice public speaking (Toastmasters)'
+        ]
+      },
+
+      // Specific major comparisons
+      'major_comparison': {
+        patterns: [
+          'so sánh ngành', 'khác nhau', 'giống nhau', 'nên chọn ngành nào',
+          'it vs design', 'marketing vs business', 'which is better'
+        ],
+        responses: [
+          '⚖️ **So sánh ngành học chi tiết!**\n\n💻 **IT vs Design:**\n• **IT**: Logic, problem-solving, high salary (15-50tr)\n• **Design**: Creativity, aesthetics, moderate salary (8-30tr)\n• **Hybrid**: UI/UX Design - Best of both worlds!\n\n📊 **Marketing vs Business:**\n• **Marketing**: Creative campaigns, brand building\n• **Business**: Strategy, operations, management\n• **Overlap**: Both need analytical & creative thinking\n\n🎯 **Cách chọn đúng:**\n1. **Passion test**: Ngành nào bạn có thể làm free?\n2. **Skill assessment**: Strengths tự nhiên?\n3. **Market research**: Job opportunities?\n4. **Lifestyle fit**: Work-life balance mong muốn?'
+        ]
+      },
+
+      // Remote work and digital nomad
+      'remote_work': {
+        patterns: [
+          'làm remote', 'work from home', 'làm từ xa', 'digital nomad',
+          'freelance', 'làm online', 'không cần đến công ty'
+        ],
+        responses: [
+          '🌍 **Remote Work - Tương lai của công việc!**\n\n📈 **Thống kê remote work:**\n• 42% workforce sẽ làm remote by 2025\n• Remote workers earn 22% more on average\n• 95% recommend remote work to others\n\n💻 **Ngành phù hợp remote:**\n• **Tech**: Developer, Designer, Data Analyst\n• **Marketing**: Content, Social Media, SEO\n• **Business**: Consultant, Project Manager\n• **Creative**: Writer, Video Editor, Translator\n\n🛠️ **Skills cần thiết:**\n• Self-discipline & time management\n• Digital communication tools\n• Problem-solving independently\n• Strong internet & tech setup\n\n🎯 **Platform tìm remote jobs:** Upwork, Freelancer, Remote.co, We Work Remotely'
+        ]
+      },
+
+      // Certification and continuous learning
+      'certifications': {
+        patterns: [
+          'chứng chỉ', 'certificate', 'certification', 'học thêm', 'nâng cao',
+          'google certificate', 'microsoft', 'aws', 'adobe'
+        ],
+        responses: [
+          '🏆 **Chứng chỉ - Boost career của bạn!**\n\n🔥 **Hot certifications 2024:**\n\n**Tech:**\n• Google Cloud Professional\n• AWS Solutions Architect\n• Microsoft Azure Fundamentals\n• Cisco CCNA\n\n**Marketing:**\n• Google Ads Certified\n• Facebook Blueprint\n• HubSpot Content Marketing\n• Google Analytics IQ\n\n**Design:**\n• Adobe Certified Expert (ACE)\n• UX Design Certificate (Google)\n• Figma Professional\n\n💡 **Benefits:**\n• Salary increase 15-25%\n• Better job opportunities\n• Industry recognition\n• Stay updated with trends\n\n⏰ **Timeline**: Most certs take 2-6 months to complete'
+        ]
+      },
+
+      // Work-life balance concerns
+      'work_life_balance': {
+        patterns: [
+          'cân bằng cuộc sống', 'work life balance', 'áp lực công việc', 'burnout',
+          'nghỉ ngơi', 'gia đình và công việc', 'stress'
+        ],
+        responses: [
+          '⚖️ **Work-Life Balance - Chìa khóa hạnh phúc!**\n\n🎯 **Ngành có work-life balance tốt:**\n• **Government jobs** - Stable hours\n• **Education** - Summer breaks\n• **Tech (some)** - Flexible schedules\n• **Non-profit** - Mission-driven\n\n⚠️ **Ngành có áp lực cao:**\n• Investment banking\n• Medical (doctor)\n• Law (lawyer)\n• Startup early stages\n\n💡 **Tips duy trì balance:**\n• Set clear boundaries\n• Learn to say "no"\n• Prioritize health & relationships\n• Take regular breaks\n• Find work you\'re passionate about\n\n🌟 **Remember**: Success without fulfillment is the ultimate failure!'
+        ]
+      },
+
+      // Gender-specific career advice
+      'gender_careers': {
+        patterns: [
+          'phụ nữ trong tech', 'nam giới làm design', 'gender stereotype',
+          'nghề của con trai', 'nghề của con gái', 'phân biệt giới tính'
+        ],
+        responses: [
+          '👫 **Career không có giới tính!**\n\n💪 **Women in Tech rising:**\n• 28% of tech workforce (growing)\n• Female-led startups get 2.5x higher revenue\n• Top female tech leaders: Susan Wojcicki, Ginni Rometty\n\n🎨 **Men in Creative fields:**\n• 40% of designers are male\n• Many successful male influencers, stylists\n• Creativity has no gender boundaries\n\n🌟 **Breaking stereotypes:**\n• Follow your passion, not society expectations\n• Skills matter more than gender\n• Diverse teams perform 35% better\n• Your talent defines you, not your gender\n\n💡 **Success stories everywhere:** Prove that any career is possible for anyone!'
+        ]
+      },
+
+      // Entrepreneurship and starting business
+      'entrepreneurship': {
+        patterns: [
+          'khởi nghiệp', 'startup', 'kinh doanh riêng', 'làm boss', 'tự làm chủ',
+          'mở công ty', 'entrepreneur', 'business owner'
+        ],
+        responses: [
+          '🚀 **Entrepreneurship - Con đường tự do!**\n\n📊 **Startup statistics:**\n• 90% startups fail, but 10% become unicorns\n• Average age of successful entrepreneur: 45\n• 72% of entrepreneurs are motivated by independence\n\n💡 **Business ideas for students:**\n• **Tech**: App development, SaaS tools\n• **Service**: Tutoring, content creation\n• **E-commerce**: Dropshipping, handmade products\n• **Consulting**: Social media, design services\n\n🛠️ **Essential skills:**\n• Sales & marketing\n• Financial management\n• Leadership & team building\n• Problem-solving & resilience\n\n🎯 **First steps:**\n1. Validate your idea (talk to customers)\n2. Build MVP (minimum viable product)\n3. Get feedback & iterate\n4. Scale gradually'
+        ]
+      },
+
+      // Mental health and stress management
+      'mental_health': {
+        patterns: [
+          'stress', 'lo lắng', 'anxiety', 'depression', 'tâm lý', 'áp lực',
+          'burnout', 'mệt mỏi', 'không vui', 'buồn', 'suy sụp'
+        ],
+        responses: [
+          '🧠 **Sức khỏe tâm thần là ưu tiên số 1!**\n\n⚠️ **Dấu hiệu cần chú ý:**\n• Mất ngủ thường xuyên\n• Cảm thấy vô vọng, tuyệt vọng\n• Mất hứng thú với mọi thứ\n• Khó tập trung học tập\n\n🌟 **Cách quản lý stress:**\n• **Exercise**: 30 phút/ngày\n• **Meditation**: Apps như Headspace, Calm\n• **Social support**: Nói chuyện với bạn bè, gia đình\n• **Professional help**: Tâm lý học, tư vấn viên\n\n📞 **Hotline hỗ trợ:**\n• Tâm lý trẻ em: 111\n• Đường dây nóng tâm lý: 1900 6149\n\n💡 **Remember**: Seeking help is a sign of strength, not weakness!'
+        ]
+      },
+
+      // Parental expectations vs personal dreams
+      'parental_expectations': {
+        patterns: [
+          'bố mẹ muốn', 'gia đình ép', 'theo ý bố mẹ', 'mơ ước khác',
+          'không theo ý gia đình', 'đam mê khác', 'conflict với gia đình'
+        ],
+        responses: [
+          '👨‍👩‍👧‍👦 **Cân bằng giữa gia đình và ước mơ!**\n\n💝 **Hiểu góc nhìn bố mẹ:**\n• Lo lắng về tương lai con\n• Muốn sự ổn định, an toàn\n• Kinh nghiệm từ thế hệ trước\n• Yêu thương và quan tâm\n\n🎯 **Chiến lược thuyết phục:**\n1. **Research thoroughly**: Chuẩn bị data về ngành mình chọn\n2. **Show passion**: Prove bạn serious về choice này\n3. **Compromise**: Đề xuất "thử nghiệm" trong thời gian nhất định\n4. **Success examples**: Tìm role models thành công\n\n💡 **Pro tip**: Invite bố mẹ tham gia journey của bạn, đừng đối đầu!\n\n🌟 **Remember**: Cuối cùng, đây là cuộc đời của bạn!'
+        ]
+      },
+
+      // Study abroad and international education
+      'study_abroad': {
+        patterns: [
+          'du học', 'study abroad', 'học ở nước ngoài', 'singapore', 'australia',
+          'canada', 'mỹ', 'anh', 'visa', 'scholarship'
+        ],
+        responses: [
+          '🌍 **Du học - Mở rộng tầm nhìn!**\n\n🔥 **Top destinations cho IT/Business:**\n• **Canada**: Friendly immigration, quality education\n• **Australia**: Work opportunities, lifestyle\n• **Singapore**: Asian hub, English-speaking\n• **Germany**: Free tuition, strong economy\n• **Netherlands**: English programs, innovation\n\n💰 **Chi phí ước tính (1 năm):**\n• Canada: $15,000-25,000 CAD\n• Australia: $20,000-35,000 AUD\n• Singapore: $15,000-30,000 SGD\n• Germany: €500-1,500 (public unis)\n\n🏆 **Scholarships:**\n• Government scholarships\n• University merit awards\n• Private foundation grants\n\n📝 **Preparation timeline:** Start 1-2 years ahead!'
+        ]
+      },
+
+      // Part-time jobs and earning money while studying
+      'part_time_work': {
+        patterns: [
+          'làm thêm', 'part-time', 'kiếm tiền', 'việc làm thêm', 'thu nhập',
+          'làm online', 'freelance', 'kiếm tiền học phí'
+        ],
+        responses: [
+          '💼 **Làm thêm thông minh khi học!**\n\n💻 **Online jobs for students:**\n• **Tutoring**: $5-15/hour (Preply, iTalki)\n• **Content writing**: $0.05-0.20/word\n• **Social media**: $200-500/month per client\n• **Data entry**: $3-8/hour\n• **Virtual assistant**: $5-12/hour\n\n🏪 **Offline opportunities:**\n• Coffee shop barista\n• Restaurant server\n• Retail assistant\n• Event staff\n• Delivery driver\n\n⚖️ **Balance tips:**\n• Max 15-20 hours/week during school\n• Choose flexible schedule jobs\n• Prioritize studies first\n• Build skills relevant to your major\n\n💡 **Long-term thinking**: Skills > immediate money!'
+        ]
+      },
+
+      // Technology and digital skills
+      'digital_skills': {
+        patterns: [
+          'kỹ năng công nghệ', 'digital skills', 'máy tính', 'internet',
+          'social media', 'excel', 'powerpoint', 'word'
+        ],
+        responses: [
+          '💻 **Digital Skills - Must-have 2024!**\n\n🔝 **Essential for everyone:**\n• **Microsoft Office**: Word, Excel, PowerPoint\n• **Google Workspace**: Docs, Sheets, Slides\n• **Communication**: Slack, Teams, Zoom\n• **Project management**: Trello, Asana, Notion\n\n🎯 **By career path:**\n**Marketing**: Canva, Google Analytics, Facebook Ads\n**Business**: CRM systems, Data analysis, Presentation\n**IT**: Programming languages, GitHub, Cloud platforms\n**Design**: Adobe Creative Suite, Figma, Sketch\n\n📚 **Free learning resources:**\n• YouTube tutorials\n• Coursera/edX free courses\n• Google Digital Garage\n• Microsoft Learn\n\n⏰ **Timeline**: Basic proficiency in 2-4 weeks!'
+        ]
+      },
+
+      // Networking and professional relationships
+      'networking': {
+        patterns: [
+          'networking', 'kết nối', 'mối quan hệ', 'professional network',
+          'linkedin', 'gặp gỡ', 'mentor', 'connections'
+        ],
+        responses: [
+          '🤝 **Networking - Your career superpower!**\n\n📊 **Power of networking:**\n• 85% of jobs are filled through networking\n• 70% of senior executives credit networking for career success\n• Average person knows 600 people\n\n🌟 **How to network effectively:**\n• **Give first**: Help others before asking\n• **Be genuine**: Authentic relationships last\n• **Follow up**: Stay in touch regularly\n• **Add value**: Share useful information\n\n📱 **Platforms to use:**\n• **LinkedIn**: Professional networking\n• **Facebook groups**: Industry communities\n• **Discord/Slack**: Tech communities\n• **Meetup**: Local events\n\n💡 **For introverts**: Start online, then move to small events!'
+        ]
+      },
+
+      // Interview preparation and job search
+      'interview_prep': {
+        patterns: [
+          'phỏng vấn', 'interview', 'tìm việc', 'job search', 'cv', 'resume',
+          'chuẩn bị phỏng vấn', 'câu hỏi phỏng vấn'
+        ],
+        responses: [
+          '🎯 **Ace your interviews!**\n\n📋 **Common interview questions:**\n• "Tell me about yourself"\n• "Why do you want this job?"\n• "What are your strengths/weaknesses?"\n• "Where do you see yourself in 5 years?"\n• "Why should we hire you?"\n\n🎭 **STAR method for behavioral questions:**\n• **Situation**: Set the context\n• **Task**: Describe what needed to be done\n• **Action**: Explain what you did\n• **Result**: Share the outcome\n\n💼 **CV tips:**\n• Tailor for each job\n• Use action verbs\n• Quantify achievements\n• Keep it 1-2 pages\n• Professional email address\n\n🎪 **Mock interviews**: Practice with friends, record yourself!'
+        ]
+      },
+
+      // Creative industries and artistic careers
+      'creative_careers': {
+        patterns: [
+          'nghệ thuật', 'sáng tạo', 'creative', 'artist', 'designer', 'musician',
+          'writer', 'photographer', 'filmmaker', 'content creator'
+        ],
+        responses: [
+          '🎨 **Creative Careers - Follow your artistic soul!**\n\n🌟 **Booming creative fields:**\n• **Content Creation**: YouTube, TikTok, Instagram\n• **UX/UI Design**: Digital experiences\n• **Game Design**: Entertainment industry\n• **Digital Marketing**: Creative campaigns\n• **Film/Video**: Streaming platforms boom\n\n💰 **Monetization strategies:**\n• **Portfolio building**: Showcase best work\n• **Multiple income streams**: Don\'t rely on one source\n• **Personal branding**: Build your unique style\n• **Client relationships**: Repeat business\n\n🛠️ **Essential tools:**\n• Adobe Creative Cloud\n• Figma/Sketch for design\n• Canva for quick graphics\n• Social media scheduling tools\n\n💡 **Success tip**: Creativity + Business skills = Unstoppable!'
+        ]
+      },
+
+      // STEM fields and technical careers
+      'stem_careers': {
+        patterns: [
+          'stem', 'khoa học', 'kỹ thuật', 'công nghệ', 'toán học', 'vật lý',
+          'hóa học', 'sinh học', 'engineering', 'scientist'
+        ],
+        responses: [
+          '🔬 **STEM - Shaping the future!**\n\n🚀 **Hot STEM careers 2024:**\n• **Data Scientist**: $95,000-130,000/year\n• **AI Engineer**: $100,000-150,000/year\n• **Cybersecurity**: $80,000-120,000/year\n• **Biotech**: $70,000-110,000/year\n• **Renewable Energy**: $60,000-100,000/year\n\n🧠 **Skills employers want:**\n• Problem-solving & analytical thinking\n• Programming (Python, R, SQL)\n• Statistics & data analysis\n• Research methodology\n• Technical communication\n\n🎓 **Education paths:**\n• Traditional 4-year degree\n• Coding bootcamps (3-6 months)\n• Online certifications\n• Self-taught + portfolio\n\n💡 **Women in STEM**: Breaking barriers, endless opportunities!'
+        ]
+      },
+
+      // Social impact and non-profit careers
+      'social_impact': {
+        patterns: [
+          'tác động xã hội', 'non-profit', 'từ thiện', 'giúp đỡ', 'community',
+          'social work', 'volunteer', 'changing the world'
+        ],
+        responses: [
+          '🌍 **Social Impact - Change the world!**\n\n❤️ **Meaningful career paths:**\n• **Non-profit management**: Leading social organizations\n• **Social entrepreneurship**: Business for good\n• **Community development**: Local impact\n• **International aid**: Global humanitarian work\n• **Environmental conservation**: Save the planet\n\n💰 **Financial reality:**\n• Lower salaries but high job satisfaction\n• Grant funding opportunities\n• Corporate social responsibility roles pay well\n• Social enterprises can be profitable\n\n🌟 **Skills needed:**\n• Empathy & emotional intelligence\n• Project management\n• Fundraising & grant writing\n• Communication & advocacy\n• Cultural sensitivity\n\n💡 **Start now**: Volunteer, intern, join causes you care about!'
+        ]
+      },
+
+      // Graphic Design specific
+      'graphic_design': {
+        patterns: [
+          'thiết kế đồ họa', 'graphic design', 'graphic designer', 'đồ họa',
+          'logo design', 'poster design', 'branding', 'visual identity'
+        ],
+        responses: [
+          '🎨 **Graphic Design Career - Nghề thiết kế đồ họa!**\n\n✨ **Lĩnh vực chuyên môn:**\n• **Logo & Branding**: Thiết kế nhận diện thương hiệu\n• **Print Design**: Poster, brochure, catalog\n• **Packaging Design**: Bao bì sản phẩm\n• **Web Graphics**: Banner, infographic\n• **Social Media Graphics**: Content cho mạng xã hội\n\n💰 **Mức thu nhập:**\n• **Fresher**: 6-12 triệu\n• **Junior**: 8-15 triệu\n• **Senior**: 15-25 triệu\n• **Art Director**: 20-40 triệu\n\n🛠️ **Tools cần thiết:**\n• Adobe Photoshop, Illustrator\n• InDesign, After Effects\n• Figma, Canva\n\n💡 **Lời khuyên**: Xây dựng portfolio mạnh và theo kịp trend design!'
+        ]
+      },
+
+      // Specific suggested questions from ChatPage
+      'it_curriculum': {
+        patterns: [
+          'ngành công nghệ thông tin học những gì', 'it học gì', 'học ngành it',
+          'chương trình học it', 'môn học công nghệ thông tin'
+        ],
+        responses: [
+          '💻 **Ngành Công nghệ thông tin - Chương trình học toàn diện!**\n\n📚 **Kiến thức cốt lõi:**\n• **Lập trình**: Java, Python, C#, JavaScript\n• **Cơ sở dữ liệu**: MySQL, PostgreSQL, MongoDB\n• **Phát triển Web**: HTML/CSS, React, Node.js\n• **Mobile App**: Android, iOS, Flutter\n• **Mạng máy tính**: TCP/IP, Security, Cloud\n• **AI/ML cơ bản**: Machine Learning, Data Science\n\n🎯 **Kỹ năng thực hành:**\n• Xây dựng website hoàn chỉnh\n• Phát triển mobile app\n• Quản trị hệ thống\n• DevOps và Cloud Computing\n\n⏰ **Thời gian đào tạo:** 2.5-3 năm\n💡 **Đặc biệt:** 70% thời gian thực hành, 30% lý thuyết!'
+        ]
+      },
+
+      'design_job_opportunities': {
+        patterns: [
+          'cơ hội việc làm sau khi tốt nghiệp ngành thiết kế đồ họa',
+          'việc làm thiết kế đồ họa', 'ra trường thiết kế làm gì'
+        ],
+        responses: [
+          '🎨 **Cơ hội việc làm Thiết kế đồ họa - Rộng mở và đa dạng!**\n\n🏢 **Vị trí việc làm hot:**\n• **Graphic Designer**: Agency, in-house design team\n• **UI/UX Designer**: Tech companies, startups\n• **Brand Designer**: Marketing agencies\n• **Social Media Designer**: Digital marketing\n• **Freelance Designer**: Làm việc tự do\n\n💼 **Ngành tuyển dụng nhiều:**\n• Công ty quảng cáo & marketing\n• Công ty công nghệ (UI/UX)\n• Nhà xuất bản, báo chí\n• E-commerce & retail\n• Startup và SMEs\n\n📈 **Triển vọng nghề nghiệp:**\n• **Junior → Senior**: 2-3 năm\n• **Art Director**: 5-7 năm kinh nghiệm\n• **Creative Director**: 8+ năm\n\n🌟 **Tỷ lệ có việc làm:** 95% trong vòng 6 tháng!'
+        ]
+      },
+
+      'fpt_admission': {
+        patterns: [
+          'điều kiện tuyển sinh fpt polytechnic như thế nào', 'điều kiện tuyển sinh fpt polytechnic',
+          'tuyển sinh fpt poly', 'điều kiện vào fpt', 'xét tuyển fpt polytechnic',
+          'điều kiện tuyển sinh fpt', 'fpt polytechnic tuyển sinh', 'như thế nào'
+        ],
+        responses: [
+          '📚 **Điều kiện tuyển sinh FPT Polytechnic 2024!**\n\n🎯 **Phương thức xét tuyển:**\n• **Xét học bạ THPT**: Điểm trung bình 3 năm\n• **Xét điểm thi tốt nghiệp**: Tổ hợp A00, A01, D01\n• **Xét tuyển thẳng**: Học sinh giỏi, có chứng chỉ\n\n📊 **Điểm chuẩn tham khảo 2023:**\n• **Công nghệ thông tin**: 18-22 điểm\n• **Thiết kế đồ họa**: 16-20 điểm\n• **Marketing**: 15-19 điểm\n• **Quản trị kinh doanh**: 15-18 điểm\n\n📝 **Hồ sơ cần thiết:**\n• Bằng tốt nghiệp THPT (bản sao)\n• Học bạ THPT (bản sao)\n• Giấy khai sinh\n• 4 ảnh 3x4\n\n🎁 **Ưu đãi đặc biệt:** Học bổng 50-100% học phí!'
+        ]
+      },
+
+      'marketing_vs_business': {
+        patterns: [
+          'so sánh ngành marketing và quản trị kinh doanh',
+          'marketing vs business', 'khác biệt marketing và quản trị'
+        ],
+        responses: [
+          '📊 **Marketing vs Quản trị Kinh doanh - So sánh chi tiết!**\n\n📈 **MARKETING:**\n• **Focus**: Quảng cáo, brand building, customer acquisition\n• **Skills**: Creativity, content creation, data analysis\n• **Jobs**: Marketing Executive, Digital Marketer, Brand Manager\n• **Salary**: 8-30 triệu (tùy kinh nghiệm)\n• **Tính cách phù hợp**: Sáng tạo, năng động, thích xu hướng\n\n💼 **QUẢN TRỊ KINH DOANH:**\n• **Focus**: Vận hành, quản lý, strategy, operations\n• **Skills**: Leadership, planning, financial management\n• **Jobs**: Business Analyst, Project Manager, Operations Manager\n• **Salary**: 10-35 triệu (tùy vị trí)\n• **Tính cách phù hợp**: Logic, có tầm nhìn, thích quản lý\n\n🎯 **Điểm chung:** Cả hai đều cần hiểu biết về thị trường và khách hàng\n\n💡 **Lời khuyên:** Marketing = Creative + Data, Business = Strategy + Management'
+        ]
+      },
+
+      'math_suitable_majors': {
+        patterns: [
+          'ngành nào phù hợp với người thích toán học',
+          'giỏi toán nên học ngành gì', 'toán học ứng dụng'
+        ],
+        responses: [
+          '🧮 **Ngành học dành cho tín đồ Toán học!**\n\n🎯 **Top ngành "ăn toán" nhất:**\n• **Data Science & Analytics**: Thống kê, machine learning\n• **Fintech & Banking**: Phân tích tài chính, risk management\n• **Software Engineering**: Algorithms, problem solving\n• **Game Development**: Physics engine, 3D mathematics\n• **Cybersecurity**: Cryptography, security algorithms\n\n💻 **Tại FPT Polytechnic:**\n• **Công nghệ thông tin**: Algorithm design, data structures\n• **Thiết kế đồ họa**: Geometry, color theory, proportions\n\n📈 **Triển vọng nghề nghiệp:**\n• **Data Scientist**: 20-50 triệu\n• **Quantitative Analyst**: 25-60 triệu\n• **Software Engineer**: 15-45 triệu\n• **Game Developer**: 12-35 triệu\n\n💡 **Lời khuyên**: Kết hợp toán học với công nghệ = Combo vô địch!'
+        ]
+      }
+    };
+  }
+
+  // Enhanced pattern matching with template system
   private getComprehensivePatterns(): {[key: string]: any} {
     return {
+      // High priority suggested questions
+      'fpt_admission_question': {
+        patterns: ['điều kiện tuyển sinh fpt polytechnic như thế nào'],
+        keywords: ['điều kiện', 'tuyển sinh', 'fpt', 'polytechnic', 'như thế nào'],
+        exactPhrases: ['điều kiện tuyển sinh fpt polytechnic như thế nào'],
+        priority: 10,
+        responses: [
+          '📚 **Điều kiện tuyển sinh FPT Polytechnic 2024!**\n\n🎯 **Phương thức xét tuyển:**\n• **Xét học bạ THPT**: Điểm trung bình 3 năm\n• **Xét điểm thi tốt nghiệp**: Tổ hợp A00, A01, D01\n• **Xét tuyển thẳng**: Học sinh giỏi, có chứng chỉ\n\n📊 **Điểm chuẩn tham khảo 2023:**\n• **Công nghệ thông tin**: 18-22 điểm\n• **Thiết kế đồ họa**: 16-20 điểm\n• **Marketing**: 15-19 điểm\n• **Quản trị kinh doanh**: 15-18 điểm\n\n📝 **Hồ sơ cần thiết:**\n• Bằng tốt nghiệp THPT (bản sao)\n• Học bạ THPT (bản sao)\n• Giấy khai sinh\n• 4 ảnh 3x4\n\n🎁 **Ưu đãi đặc biệt:** Học bổng 50-100% học phí!'
+        ]
+      },
+
       // Specific academic concerns with high priority
       'specific_concerns': {
         patterns: [

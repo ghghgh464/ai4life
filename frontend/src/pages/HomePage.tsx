@@ -46,7 +46,7 @@ const HomePage: React.FC = () => {
           
           <p className="text-xl md:text-2xl text-gray-600 mb-12 max-w-4xl mx-auto leading-relaxed animate-fade-in" style={{animationDelay: '0.8s'}}>
             Ứng dụng AI thông minh giúp bạn tìm ra ngành học phù hợp nhất tại{' '}
-            <span className="font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">FPT Polytechnic</span>{' '}
+            <span className="font-bold text-transparent bg-clip-text bg-gradient-to-r from-fpt-blue to-fpt-orange">FPT Polytechnic</span>{' '}
             dựa trên phân tích sâu về tính cách, sở thích và khả năng của bạn.
           </p>
           
@@ -54,7 +54,7 @@ const HomePage: React.FC = () => {
           <div className="flex flex-col sm:flex-row gap-6 justify-center items-center mb-12">
             <Link
               to="/survey"
-              className="group relative bg-gradient-to-r from-blue-600 via-purple-600 to-blue-600 text-white text-lg px-10 py-5 rounded-2xl font-bold hover:shadow-2xl hover:shadow-blue-500/25 hover:scale-110 transition-all duration-500 inline-flex items-center justify-center min-w-[240px] overflow-hidden animate-scale-in"
+              className="group relative bg-gradient-to-r from-fpt-blue via-fpt-orange to-fpt-green text-white text-lg px-10 py-5 rounded-2xl font-bold hover:shadow-2xl hover:shadow-fpt-blue/25 hover:scale-110 transition-all duration-500 inline-flex items-center justify-center min-w-[240px] overflow-hidden animate-scale-in"
               style={{animationDelay: '1s'}}
             >
               {/* Shimmer effect */}
@@ -67,7 +67,7 @@ const HomePage: React.FC = () => {
               </svg>
               
               {/* Glow effect */}
-              <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-blue-600 to-purple-600 blur opacity-0 group-hover:opacity-50 transition-opacity duration-500 -z-10"></div>
+              <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-fpt-blue to-fpt-orange blur opacity-0 group-hover:opacity-50 transition-opacity duration-500 -z-10"></div>
             </Link>
             
             <Link
@@ -283,7 +283,7 @@ const HomePage: React.FC = () => {
                   👩‍🎓
                 </div>
                 <div className="text-left">
-                  <div className="font-semibold text-lg">Nguyễn Minh Anh</div>
+                  <div className="font-semibold text-lg">Nguyễn Thế Huy, Nguyễn Đình Tuấn An503  </div>
                   <div className="text-white/70 text-sm">Sinh viên IT FPT</div>
                 </div>
               </div>

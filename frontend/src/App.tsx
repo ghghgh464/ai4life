@@ -1,15 +1,30 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import Header from './components/Header';
+import Footer from './components/Footer';
 import HomePage from './pages/HomePage';
 import SurveyPage from './pages/SurveyPage';
 import ResultsPage from './pages/ResultsPage';
 import ChatPage from './pages/ChatPage';
 
+// Component to handle scroll behavior
+function ScrollToTop() {
+  const location = useLocation();
+
+  useEffect(() => {
+    // Only scroll to top on route change, not on chat interactions
+    if (location.pathname !== '/chat') {
+      window.scrollTo(0, 0);
+    }
+  }, [location]);
+
+  return null;
+}
+
 function App() {
   return (
     <Router>
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/30 to-purple-50/30 relative overflow-hidden">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/30 to-purple-50/30 relative overflow-x-hidden flex flex-col">
         {/* Enhanced animated background */}
         <div className="fixed inset-0 overflow-hidden pointer-events-none">
           {/* Large floating blobs */}
@@ -33,8 +48,9 @@ function App() {
           <div className="absolute inset-0 bg-gradient-to-br from-transparent via-white/3 to-transparent animate-gradient-xy opacity-50"></div>
         </div>
         
+        <ScrollToTop />
         <Header />
-        <main className="relative z-10 container mx-auto px-4 py-8">
+        <main className="relative z-10 flex-1 container mx-auto px-4 py-8">
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/survey" element={<SurveyPage />} />
@@ -42,6 +58,7 @@ function App() {
             <Route path="/chat" element={<ChatPage />} />
           </Routes>
         </main>
+        <Footer />
       </div>
     </Router>
   );
