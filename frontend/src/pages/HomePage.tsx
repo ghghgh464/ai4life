@@ -92,6 +92,162 @@ const HomePage: React.FC = () => {
         </div>
       </div>
 
+      {/* Survey Process Section */}
+      <div className="py-20 relative overflow-hidden">
+        {/* Background decorations */}
+        <div className="absolute inset-0 opacity-20">
+          <div className="absolute top-10 left-1/3 w-64 h-64 bg-gradient-to-r from-orange-400/30 to-red-400/30 rounded-full blur-3xl animate-float"></div>
+          <div className="absolute bottom-10 right-1/3 w-64 h-64 bg-gradient-to-r from-blue-400/30 to-purple-400/30 rounded-full blur-3xl animate-float" style={{animationDelay: '2s'}}></div>
+        </div>
+
+        <div className="relative z-10">
+          <div className="text-center mb-16">
+            <div className="inline-block animate-slide-down">
+              <h2 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6">
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-600 via-red-600 to-pink-600 animate-gradient-x">
+                  Quy trình khảo sát
+                </span>
+              </h2>
+            </div>
+            <p className="text-xl md:text-2xl text-gray-600 max-w-3xl mx-auto animate-fade-in" style={{animationDelay: '0.3s'}}>
+              4 bước đơn giản để khám phá ngành học phù hợp với bạn
+            </p>
+          </div>
+
+          {/* Survey Steps */}
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 mb-16">
+            {/* Step 1 */}
+            <div className="group relative animate-slide-up" style={{animationDelay: '0.1s'}}>
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 to-cyan-600/20 rounded-3xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+              <div className="relative bg-white/90 backdrop-blur-lg rounded-3xl p-8 shadow-xl hover:shadow-blue-500/25 transition-all duration-500 border border-white/20 hover:border-blue-200/50 text-center group-hover:scale-105 group-hover:-translate-y-2">
+                {/* Step number */}
+                <div className="absolute -top-4 left-6 w-8 h-8 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-lg">
+                  1
+                </div>
+                
+                {/* Icon */}
+                <div className="relative w-20 h-20 mx-auto mb-6">
+                  <div className="absolute inset-0 bg-gradient-to-br from-blue-400 to-blue-600 rounded-2xl rotate-6 group-hover:rotate-12 transition-transform duration-500"></div>
+                  <div className="relative bg-gradient-to-br from-blue-500 to-blue-700 rounded-2xl w-full h-full flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                    <span className="text-3xl text-white">👋</span>
+                  </div>
+                </div>
+                
+                <h3 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-blue-600 transition-colors">
+                  Thông tin cá nhân
+                </h3>
+                <p className="text-gray-600 text-sm leading-relaxed">
+                  Họ tên, tuổi, lớp học hiện tại
+                </p>
+              </div>
+            </div>
+
+            {/* Step 2 */}
+            <div className="group relative animate-slide-up" style={{animationDelay: '0.2s'}}>
+              <div className="absolute inset-0 bg-gradient-to-r from-green-600/20 to-emerald-600/20 rounded-3xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+              <div className="relative bg-white/90 backdrop-blur-lg rounded-3xl p-8 shadow-xl hover:shadow-green-500/25 transition-all duration-500 border border-white/20 hover:border-green-200/50 text-center group-hover:scale-105 group-hover:-translate-y-2">
+                {/* Step number */}
+                <div className="absolute -top-4 left-6 w-8 h-8 bg-gradient-to-r from-green-500 to-green-600 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-lg">
+                  2
+                </div>
+                
+                {/* Icon */}
+                <div className="relative w-20 h-20 mx-auto mb-6">
+                  <div className="absolute inset-0 bg-gradient-to-br from-green-400 to-green-600 rounded-2xl -rotate-6 group-hover:-rotate-12 transition-transform duration-500"></div>
+                  <div className="relative bg-gradient-to-br from-green-500 to-green-700 rounded-2xl w-full h-full flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                    <span className="text-3xl text-white">🌟</span>
+                  </div>
+                </div>
+                
+                <h3 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-green-600 transition-colors">
+                  Sở thích & Kỹ năng
+                </h3>
+                <p className="text-gray-600 text-sm leading-relaxed">
+                  Lĩnh vực quan tâm và điểm mạnh của bạn
+                </p>
+              </div>
+            </div>
+
+            {/* Step 3 */}
+            <div className="group relative animate-slide-up" style={{animationDelay: '0.3s'}}>
+              <div className="absolute inset-0 bg-gradient-to-r from-purple-600/20 to-pink-600/20 rounded-3xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+              <div className="relative bg-white/90 backdrop-blur-lg rounded-3xl p-8 shadow-xl hover:shadow-purple-500/25 transition-all duration-500 border border-white/20 hover:border-purple-200/50 text-center group-hover:scale-105 group-hover:-translate-y-2">
+                {/* Step number */}
+                <div className="absolute -top-4 left-6 w-8 h-8 bg-gradient-to-r from-purple-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-lg">
+                  3
+                </div>
+                
+                {/* Icon */}
+                <div className="relative w-20 h-20 mx-auto mb-6">
+                  <div className="absolute inset-0 bg-gradient-to-br from-purple-400 to-purple-600 rounded-2xl rotate-6 group-hover:rotate-12 transition-transform duration-500"></div>
+                  <div className="relative bg-gradient-to-br from-purple-500 to-purple-700 rounded-2xl w-full h-full flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                    <span className="text-3xl text-white">📊</span>
+                  </div>
+                </div>
+                
+                <h3 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-purple-600 transition-colors">
+                  Kết quả học tập
+                </h3>
+                <p className="text-gray-600 text-sm leading-relaxed">
+                  Điểm số các môn học quan trọng
+                </p>
+              </div>
+            </div>
+
+            {/* Step 4 */}
+            <div className="group relative animate-slide-up" style={{animationDelay: '0.4s'}}>
+              <div className="absolute inset-0 bg-gradient-to-r from-orange-600/20 to-red-600/20 rounded-3xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+              <div className="relative bg-white/90 backdrop-blur-lg rounded-3xl p-8 shadow-xl hover:shadow-orange-500/25 transition-all duration-500 border border-white/20 hover:border-orange-200/50 text-center group-hover:scale-105 group-hover:-translate-y-2">
+                {/* Step number */}
+                <div className="absolute -top-4 left-6 w-8 h-8 bg-gradient-to-r from-orange-500 to-orange-600 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-lg">
+                  4
+                </div>
+                
+                {/* Icon */}
+                <div className="relative w-20 h-20 mx-auto mb-6">
+                  <div className="absolute inset-0 bg-gradient-to-br from-orange-400 to-orange-600 rounded-2xl -rotate-6 group-hover:-rotate-12 transition-transform duration-500"></div>
+                  <div className="relative bg-gradient-to-br from-orange-500 to-orange-700 rounded-2xl w-full h-full flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                    <span className="text-3xl text-white">🎯</span>
+                  </div>
+                </div>
+                
+                <h3 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-orange-600 transition-colors">
+                  Định hướng tương lai
+                </h3>
+                <p className="text-gray-600 text-sm leading-relaxed">
+                  Ước mơ nghề nghiệp và phong cách làm việc
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Call to Action */}
+          <div className="text-center">
+            <Link
+              to="/survey"
+              className="group relative inline-flex items-center bg-gradient-to-r from-orange-600 via-red-600 to-pink-600 text-white text-xl px-12 py-6 rounded-3xl font-bold hover:shadow-2xl hover:shadow-orange-500/30 hover:scale-110 transition-all duration-500 overflow-hidden animate-scale-in"
+              style={{animationDelay: '0.6s'}}
+            >
+              {/* Shimmer effect */}
+              <div className="absolute inset-0 -top-px bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12 group-hover:animate-shimmer"></div>
+              
+              <span className="mr-4 text-2xl group-hover:animate-bounce">📋</span>
+              <span className="relative z-10 font-extrabold">BẮT ĐẦU KHẢO SÁT NGAY</span>
+              <svg className="ml-4 w-6 h-6 group-hover:translate-x-2 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+              </svg>
+              
+              {/* Glow effect */}
+              <div className="absolute inset-0 rounded-3xl bg-gradient-to-r from-orange-600 to-red-600 blur opacity-0 group-hover:opacity-60 transition-opacity duration-500 -z-10"></div>
+            </Link>
+            
+            <p className="mt-6 text-gray-500 text-lg animate-fade-in" style={{animationDelay: '0.8s'}}>
+              ⏱️ Chỉ mất 5 phút • 🎯 Kết quả chính xác 95% • 🆓 Hoàn toàn miễn phí
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* Features Section */}
       <div className="py-20 relative overflow-hidden">
         {/* Background gradient mesh */}
