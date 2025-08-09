@@ -54,20 +54,20 @@ const HomePage: React.FC = () => {
           <div className="flex flex-col sm:flex-row gap-6 justify-center items-center mb-12">
             <Link
               to="/survey"
-              className="group relative bg-gradient-to-r from-fpt-blue via-fpt-orange to-fpt-green text-white text-lg px-10 py-5 rounded-2xl font-bold hover:shadow-2xl hover:shadow-fpt-blue/25 hover:scale-110 transition-all duration-500 inline-flex items-center justify-center min-w-[240px] overflow-hidden animate-scale-in"
+              className="group relative bg-gradient-to-r from-orange-600 via-red-600 to-pink-600 text-white text-xl px-12 py-6 rounded-3xl font-extrabold hover:shadow-2xl hover:shadow-orange-500/30 hover:scale-110 transition-all duration-500 inline-flex items-center justify-center min-w-[300px] overflow-hidden animate-scale-in"
               style={{animationDelay: '1s'}}
             >
               {/* Shimmer effect */}
-              <div className="absolute inset-0 -top-px bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 group-hover:animate-shimmer"></div>
+              <div className="absolute inset-0 -top-px bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12 group-hover:animate-shimmer"></div>
               
-              <span className="mr-3 text-xl group-hover:animate-bounce">📋</span>
-              <span className="relative z-10">Bắt đầu khảo sát</span>
-              <svg className="ml-3 w-6 h-6 group-hover:translate-x-2 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+              <span className="mr-4 text-2xl group-hover:animate-bounce">📋</span>
+              <span className="relative z-10 font-black text-xl">BẮT ĐẦU KHẢO SÁT</span>
+              <svg className="ml-4 w-7 h-7 group-hover:translate-x-2 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M13 7l5 5m0 0l-5 5m5-5H6" />
               </svg>
               
               {/* Glow effect */}
-              <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-fpt-blue to-fpt-orange blur opacity-0 group-hover:opacity-50 transition-opacity duration-500 -z-10"></div>
+              <div className="absolute inset-0 rounded-3xl bg-gradient-to-r from-orange-600 to-red-600 blur opacity-0 group-hover:opacity-60 transition-opacity duration-500 -z-10"></div>
             </Link>
             
             <Link
