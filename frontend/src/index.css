@@ -29,4 +29,37 @@
   .input-field {
     @apply w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent;
   }
+
+  /* Custom animation delay classes */
+  .animation-delay-2000 {
+    animation-delay: 2s;
+  }
+
+  .animation-delay-4000 {
+    animation-delay: 4s;
+  }
+
+  /* Enhanced glassmorphism */
+  .glass {
+    background: rgba(255, 255, 255, 0.25);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+  }
+
+  .glass-dark {
+    background: rgba(0, 0, 0, 0.25);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.125);
+  }
+
+  /* Neumorphism effects */
+  .neuro-light {
+    background: #f0f0f0;
+    box-shadow: 20px 20px 60px #d1d1d1, -20px -20px 60px #ffffff;
+  }
+
+  .neuro-dark {
+    background: #2d3748;
+    box-shadow: 20px 20px 60px #1a202c, -20px -20px 60px #4a5568;
+  }
 }
