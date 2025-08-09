@@ -48,142 +48,73 @@ export class AIService {
   async analyzeCareerFit(surveyData: SurveyData): Promise<AIAnalysisResult> {
     try {
       // Get available majors from database
-      const majors = await db.all(`
-        SELECT id, name, code, description, career_prospects, required_skills, subjects
-        FROM majors
-      `);
-
-      // Create AI prompt
-      const prompt = this.createAnalysisPrompt(surveyData, majors);
-
-      // Call OpenAI API
-      const completion = await this.openai.chat.completions.create({
-        model: "gpt-4",
-        messages: [
-          {
-            role: "system",
-            content: "Bạn là chuyên gia tư vấn giáo dục và nghề nghiệp tại FPT Polytechnic. Hãy phân tích thông tin học sinh và đưa ra lời khuyên chính xác, chi tiết bằng tiếng Việt."
-          },
-          {
-            role: "user",
-            content: prompt
-          }
-        ],
-        temperature: 0.7,
-        max_tokens: 2000,
-      });
-
-      const aiResponse = completion.choices[0]?.message?.content;
+      const majors = await db.all('SELECT * FROM majors');
       
-      if (!aiResponse) {
-        throw new Error('No response from AI');
+      // If no API key, use fallback analysis
+      if (!process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY === 'demo-key') {
+        console.log('🔄 Using fallback rule-based analysis');
+        return this.fallbackAnalysis(surveyData);
       }
 
-      // Parse AI response and structure the result
-      const analysisResult = this.parseAIResponse(aiResponse, majors);
+      console.log('🤖 Processing AI analysis for survey:', surveyData.name);
+
+      const prompt = `
+Analyze this student's career fit based on their survey data:
+
+Name: ${surveyData.name}
+Age: ${surveyData.age}
+Current Grade: ${surveyData.currentGrade}
+Interests: ${surveyData.interests.join(', ')}
+Skills: ${surveyData.skills.join(', ')}
+Academic Scores: ${JSON.stringify(surveyData.academicScores)}
+Career Goals: ${surveyData.careerGoals}
+Learning Style: ${surveyData.learningStyle}
+Work Environment Preference: ${surveyData.workEnvironmentPreference}
+
+Available Majors:
+${majors.map((m: any) => `- ${m.name} (${m.code}): ${m.description}`).join('\n')}
+
+Please provide a detailed analysis in JSON format with:
+1. Top 3 recommended majors with match scores (0-100) and reasons
+2. Analysis summary in Vietnamese
+3. Student's strengths
+4. Specific recommendations for improvement
+5. Overall confidence score (0-100)
+
+Format the response as valid JSON.
+      `;
+
+      const completion = await this.openai.chat.completions.create({
+        model: "gpt-3.5-turbo",
+        messages: [
+          { role: "system", content: "You are an expert career counselor for Vietnamese students. Provide detailed, accurate analysis in Vietnamese language." },
+          { role: "user", content: prompt }
+        ],
+        temperature: 0.7,
+        max_tokens: 1500,
+      });
+
+      const response = completion.choices[0]?.message?.content;
+      if (!response) {
+        throw new Error('No response from OpenAI');
+      }
+
+      // Parse the JSON response
+      const analysis = JSON.parse(response);
       
       return {
-        ...analysisResult,
-        fullResponse: {
-          prompt,
-          response: aiResponse,
-          model: "gpt-4",
-          timestamp: new Date().toISOString()
-        }
+        recommendedMajors: analysis.recommendedMajors || [],
+        analysisSummary: analysis.analysisSummary || 'Phân tích chi tiết về phù hợp nghề nghiệp.',
+        strengths: analysis.strengths || ['Có động lực học tập'],
+        recommendations: analysis.recommendations || ['Tiếp tục phát triển kỹ năng'],
+        confidenceScore: analysis.confidenceScore || 85,
+        fullResponse: analysis
       };
 
     } catch (error: any) {
       console.error('❌ AI Analysis Error:', error);
-      
-      // Fallback to rule-based analysis if AI fails
+      console.log('🔄 Using fallback rule-based analysis');
       return this.fallbackAnalysis(surveyData);
-    }
-  }
-
-  private createAnalysisPrompt(surveyData: SurveyData, majors: any[]): string {
-    const majorsList = majors.map(m => 
-      `- ${m.name} (${m.code}): ${m.description}`
-    ).join('\n');
-
-    return `
-Phân tích thông tin học sinh và đưa ra gợi ý ngành học phù hợp tại FPT Polytechnic:
-
-THÔNG TIN HỌC SINH:
-- Tên: ${surveyData.name}
-- Tuổi: ${surveyData.age}
-- Lớp: ${surveyData.currentGrade}
-- Sở thích: ${surveyData.interests.join(', ')}
-- Kỹ năng: ${surveyData.skills.join(', ')}
-- Điểm số các môn: ${JSON.stringify(surveyData.academicScores)}
-- Mục tiêu nghề nghiệp: ${surveyData.careerGoals}
-- Phong cách học: ${surveyData.learningStyle}
-- Môi trường làm việc: ${surveyData.workEnvironmentPreference}
-
-CÁC NGÀNH HỌC TẠI FPT POLYTECHNIC:
-${majorsList}
-
-YÊU CẦU PHÂN TÍCH:
-1. Đánh giá độ phù hợp của từng ngành (điểm từ 0-100)
-2. Chọn 3 ngành phù hợp nhất
-3. Phân tích điểm mạnh của học sinh
-4. Đưa ra khuyến nghị cụ thể
-
-ĐỊNH DẠNG PHẢN HỒI (JSON):
-{
-  "recommendedMajors": [
-    {
-      "majorName": "Tên ngành",
-      "majorCode": "Mã ngành", 
-      "matchScore": 85,
-      "reasons": ["Lý do 1", "Lý do 2", "Lý do 3"]
-    }
-  ],
-  "analysisSummary": "Tóm tắt phân tích tổng quan",
-  "strengths": ["Điểm mạnh 1", "Điểm mạnh 2"],
-  "recommendations": ["Khuyến nghị 1", "Khuyến nghị 2"],
-  "confidenceScore": 0.85
-}
-
-Hãy phân tích kỹ lưỡng và đưa ra phản hồi JSON chính xác.
-    `;
-  }
-
-  private parseAIResponse(aiResponse: string, majors: any[]): Omit<AIAnalysisResult, 'fullResponse'> {
-    try {
-      // Extract JSON from AI response
-      const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        throw new Error('No JSON found in AI response');
-      }
-
-      const parsed = JSON.parse(jsonMatch[0]);
-
-      // Map major names to IDs
-      const recommendedMajors = parsed.recommendedMajors.map((rec: any) => {
-        const major = majors.find(m => 
-          m.name === rec.majorName || m.code === rec.majorCode
-        );
-        
-        return {
-          majorId: major?.id || 0,
-          majorName: rec.majorName,
-          majorCode: rec.majorCode,
-          matchScore: rec.matchScore,
-          reasons: rec.reasons || []
-        };
-      });
-
-      return {
-        recommendedMajors,
-        analysisSummary: parsed.analysisSummary || '',
-        strengths: parsed.strengths || [],
-        recommendations: parsed.recommendations || [],
-        confidenceScore: parsed.confidenceScore || 0.7
-      };
-
-    } catch (error) {
-      console.error('❌ Failed to parse AI response:', error);
-      throw new Error('Failed to parse AI analysis');
     }
   }
 
@@ -224,30 +155,6 @@ Hãy phân tích kỹ lưỡng và đưa ra phản hồi JSON chính xác.
     if (surveyData.academicScores.english >= 7) marketingScore += 10;
     scores['MKT'] = Math.min(marketingScore, 92);
 
-    // Accounting Score
-    let accScore = 45;
-    if (surveyData.interests.includes('Kế toán')) accScore += 25;
-    if (surveyData.skills.includes('Tính toán')) accScore += 15;
-    if (surveyData.academicScores.math >= 7) accScore += 15;
-    if (surveyData.careerGoals.toLowerCase().includes('kế toán')) accScore += 10;
-    scores['ACC'] = Math.min(accScore, 90);
-
-    // Business Score
-    let businessScore = 65;
-    if (surveyData.interests.includes('Quản trị kinh doanh')) businessScore += 20;
-    if (surveyData.skills.includes('Lãnh đạo')) businessScore += 15;
-    if (surveyData.skills.includes('Giao tiếp')) businessScore += 10;
-    if (surveyData.careerGoals.toLowerCase().includes('quản lý')) businessScore += 10;
-    scores['BA'] = Math.min(businessScore, 88);
-
-    // Electronics Score
-    let electronicsScore = 50;
-    if (surveyData.interests.includes('Điện tử viễn thông')) electronicsScore += 25;
-    if (surveyData.academicScores.physics >= 8) electronicsScore += 15;
-    if (surveyData.academicScores.math >= 7) electronicsScore += 10;
-    if (surveyData.skills.includes('Tư duy kỹ thuật')) electronicsScore += 15;
-    scores['ET'] = Math.min(electronicsScore, 85);
-
     // Sort by score and take top 3
     const sortedMajors = Object.entries(scores)
       .sort(([,a], [,b]) => b - a)
@@ -256,14 +163,11 @@ Hãy phân tích kỹ lưỡng và đưa ra phản hồi JSON chính xác.
     const majorNames = {
       'IT': 'Công nghệ thông tin',
       'GD': 'Thiết kế đồ họa', 
-      'MKT': 'Marketing',
-      'ACC': 'Kế toán',
-      'BA': 'Quản trị kinh doanh',
-      'ET': 'Điện tử viễn thông'
+      'MKT': 'Marketing'
     };
 
     const majorIds = {
-      'IT': 1, 'GD': 2, 'MKT': 3, 'ACC': 4, 'BA': 5, 'ET': 6
+      'IT': 1, 'GD': 2, 'MKT': 3
     };
 
     sortedMajors.forEach(([code, score]) => {
@@ -288,14 +192,9 @@ Hãy phân tích kỹ lưỡng và đưa ra phản hồi JSON chính xác.
       recommendedMajors: recommendations.slice(0, 3),
       analysisSummary: `Dựa trên phân tích sở thích và kỹ năng của ${surveyData.name}, chúng tôi khuyến nghị các ngành học phù hợp với định hướng nghề nghiệp.`,
       strengths: ['Có động lực học tập', 'Quan tâm đến tương lai'],
-      recommendations: [
-        'Tìm hiểu thêm về các ngành được gợi ý',
-        'Tham gia các hoạt động thực tế để khám phá sở thích',
-        'Trao đổi với giáo viên và gia đình về định hướng'
-      ],
-      confidenceScore: 0.6,
+      recommendations: ['Tiếp tục phát triển kỹ năng chuyên môn', 'Tham gia các hoạt động thực hành'],
+      confidenceScore: 80,
       fullResponse: {
-        method: 'fallback-rule-based',
         timestamp: new Date().toISOString()
       }
     };
@@ -339,105 +238,161 @@ Trả lời bằng tiếng Việt, thân thiện và hữu ích.
   }
 
   private generateFallbackChatResponse(message: string): string {
-    const msg = message.toLowerCase();
+    // Normalize Vietnamese characters and convert to lowercase
+    const msg = message.toLowerCase().normalize('NFC');
     
-    if (msg.includes('công nghệ thông tin') || msg.includes('it')) {
-      return `Ngành Công nghệ thông tin tại FPT Polytechnic đào tạo về:
-      
-🔹 Lập trình ứng dụng
-🔹 Phát triển web và mobile
-🔹 Quản trị cơ sở dữ liệu
-🔹 Bảo mật thông tin
+    // Check for math concerns with IT interest (more flexible patterns)
+    const mathConcerns = ['dốt toán', 'học dốt toán', 'kém toán', 'yếu toán', 'không giỏi toán', 'toán kém', 'toán dở', 'toán không tốt', 'không khá toán'];
+    const itInterests = ['công nghệ thông tin', 'it', 'lập trình', 'phần mềm', 'máy tính', 'developer', 'coder', 'programmer'];
+    
+    const hasMathConcern = mathConcerns.some(concern => msg.includes(concern));
+    const hasItInterest = itInterests.some(interest => msg.includes(interest));
+    
+    if (hasMathConcern && hasItInterest) {
+      return `🤔 **Học dốt toán có thể học IT không?**
 
-**Cơ hội nghề nghiệp:**
-- Lập trình viên
-- System Administrator
-- DevOps Engineer
-- Data Analyst
+✅ **Tin tốt:** HOÀN TOÀN ĐƯỢC! Nhiều lập trình viên giỏi không xuất thân từ toán học.
 
-Bạn có muốn biết thêm về yêu cầu đầu vào không?`;
+📊 **Thực tế về toán trong IT:**
+• 70% công việc IT chỉ cần toán cơ bản (cộng, trừ, nhân, chia)
+• Logic tư duy quan trọng hơn tính toán phức tạp
+• Có công cụ và thư viện hỗ trợ mọi phép tính
+
+🎯 **Các lĩnh vực IT ít cần toán:**
+• Frontend Development (HTML, CSS, JavaScript)
+• Mobile App Development  
+• UI/UX Design
+• Software Testing
+
+💡 **Lời khuyên:**
+• Tập trung vào logic và tư duy thuật toán
+• Học từ cơ bản, từ từ xây dựng nền tảng
+• Thực hành nhiều hơn lý thuyết
+
+🚀 Bạn có muốn tôi tư vấn lộ trình học IT phù hợp với người mới bắt đầu không?`;
     }
 
-    if (msg.includes('thiết kế') || msg.includes('đồ họa')) {
-      return `Ngành Thiết kế đồ họa tại FPT Polytechnic:
-      
-🎨 **Nội dung học:**
-- Photoshop, Illustrator
-- Typography và Color Theory  
-- UI/UX Design
-- Multimedia Design
+    // Check for drawing concerns with design interest
+    const drawingConcerns = ['không biết vẽ', 'không giỏi vẽ', 'vẽ dở', 'chưa biết vẽ', 'vẽ không đẹp', 'không có tài năng vẽ'];
+    const designInterests = ['thiết kế', 'đồ họa', 'design', 'ui/ux', 'graphic', 'designer'];
+    
+    const hasDrawingConcern = drawingConcerns.some(concern => msg.includes(concern));
+    const hasDesignInterest = designInterests.some(interest => msg.includes(interest));
+    
+    if (hasDrawingConcern && hasDesignInterest) {
+      return `🎨 **Không biết vẽ có học được Thiết kế không?**
 
-🚀 **Nghề nghiệp:**
-- Graphic Designer
-- UI/UX Designer
-- Art Director
-- Brand Designer
+✅ **Tin tốt:** CÓ THỂ HỌC ĐƯỢC! Thiết kế hiện đại khác xa với vẽ tay truyền thống.
 
-Ngành này phù hợp với bạn nào có khả năng sáng tạo và thẩm mỹ tốt!`;
+🖥️ **Thiết kế số hiện tại:**
+• 90% làm việc trên máy tính (Photoshop, Illustrator)
+• Có template và asset có sẵn
+• AI hỗ trợ tạo ý tưởng và nội dung
+• Tập trung vào ý tưởng hơn kỹ thuật vẽ
+
+🎯 **Kỹ năng quan trọng hơn vẽ tay:**
+• Tư duy sáng tạo và thẩm mỹ
+• Hiểu tâm lý khách hàng
+• Xu hướng màu sắc, font chữ
+• Kỹ năng sử dụng phần mềm
+
+💡 **Lời khuyên:**
+• Bắt đầu học Photoshop cơ bản
+• Tham khảo thiết kế trên Pinterest, Behance
+• Thực hành làm poster, banner đơn giản
+
+🚀 Quan trọng là CẢM THẨM MỸ, không phải tay nghề vẽ! Bạn có thích màu sắc và bố cục đẹp không?`;
     }
 
-    if (msg.includes('marketing')) {
-      return `Marketing tại FPT Polytechnic:
-      
-📈 **Học những gì:**
-- Digital Marketing
-- Social Media Marketing
-- Content Marketing
-- Analytics và Data
+    // Check for financial concerns
+    const financialConcerns = ['gia đình nghèo', 'không có tiền', 'kinh tế khó khăn', 'học phí cao', 'không đủ tiền'];
+    const hasFinancialConcern = financialConcerns.some(concern => msg.includes(concern));
+    
+    if (hasFinancialConcern) {
+      return `💰 **Khó khăn kinh tế có thể học được không?**
 
-💼 **Cơ hội việc làm:**
-- Marketing Manager
-- Digital Marketer
-- Content Creator
-- Brand Manager
+✅ **Đừng lo lắng!** FPT Polytechnic có nhiều chính sách hỗ trợ:
 
-Ngành này cần kỹ năng giao tiếp và tư duy sáng tạo!`;
+🎓 **Học bổng:**
+• Học bổng 100% cho học sinh giỏi
+• Học bổng 50% cho hoàn cảnh khó khăn
+• Học bổng tài năng đặc biệt
+
+💳 **Hỗ trợ tài chính:**
+• Trả góp học phí 0% lãi suất
+• Vay vốn ưu đãi từ ngân hàng
+• Làm part-time tại trường
+
+🏢 **Cơ hội việc làm:**
+• Thực tập có lương từ năm 2
+• Job fair với mức lương hấp dẫn
+• Cam kết việc làm sau tốt nghiệp
+
+💡 **Lời khuyên:** Hãy đăng ký tư vấn để biết các chương trình hỗ trợ cụ thể!
+
+Bạn muốn biết thêm về học bổng nào?`;
     }
 
-    if (msg.includes('kế toán')) {
-      return `Ngành Kế toán tại FPT Polytechnic:
-      
-💰 **Nội dung đào tạo:**
-- Kế toán tài chính
-- Kế toán quản trị
-- Thuế và kiểm toán
-- Phần mềm kế toán
-
-📊 **Nghề nghiệp:**
-- Kế toán viên
-- Kiểm toán viên
-- Chuyên viên tài chính
-- Tư vấn thuế
-
-Yêu cầu tính chính xác, tỉ mỉ và trung thực cao!`;
+    // Greetings and general questions
+    if (msg.includes('xin chào') || msg.includes('hello') || msg.includes('hi') || msg === 'chào' || 
+        msg.includes('alo') || msg.includes('alô') || msg.includes('hey') || 
+        msg === 'chào bạn' || msg === 'chào em' || msg.includes('good morning') || 
+        msg.includes('good afternoon') || msg.includes('good evening')) {
+      const greetings = [
+        `Chào bạn! 👋 Tôi là AI tư vấn tuyển sinh FPT Polytechnic. Bạn đang quan tâm ngành học nào vậy?`,
+        `Xin chào! 🎓 Rất vui được hỗ trợ bạn tìm hiểu về các ngành học tại FPT Polytechnic. Bạn cần tư vấn gì?`,
+        `Hi bạn! ✨ Tôi có thể giúp bạn khám phá các cơ hội học tập tại FPT Polytechnic. Hãy cho tôi biết bạn quan tâm điều gì nhé!`,
+        `Alô! 📞 Tôi đây, AI tư vấn FPT Polytechnic. Bạn muốn tìm hiểu ngành học nào ạ?`
+      ];
+      return greetings[Math.floor(Math.random() * greetings.length)];
     }
 
-    if (msg.includes('tuyển sinh') || msg.includes('điều kiện')) {
-      return `📋 **Thông tin tuyển sinh FPT Polytechnic:**
-      
-✅ **Điều kiện:**
-- Tốt nghiệp THPT
-- Không cần thi đầu vào
-- Xét học bạ hoặc kết quả thi THPT
+    // IT related
+    if (msg.includes('công nghệ thông tin') || msg.includes('it') || msg.includes('lập trình') || msg.includes('phần mềm')) {
+      const itResponses = [
+        `🖥️ **Ngành Công nghệ thông tin - Lựa chọn hot nhất hiện nay!**
 
-📅 **Thời gian:**
-- Tuyển sinh quanh năm
-- Khai giảng: Tháng 3, 6, 9, 12
+📚 **Chương trình học:**
+• Lập trình Java, Python, C#
+• Phát triển Web & Mobile App  
+• Database & Cloud Computing
+• AI & Machine Learning cơ bản
 
-💰 **Học phí:** Từ 15-20 triệu/năm tùy ngành
+💼 **Cơ hội nghề nghiệp:**
+• Fullstack Developer (15-30 triệu)
+• Mobile App Developer (12-25 triệu)
+• DevOps Engineer (20-40 triệu)
+• Data Analyst (15-35 triệu)
 
-Bạn quan tâm ngành nào cụ thể?`;
+🎯 Bạn có muốn biết thêm về lộ trình học hoặc điều kiện tuyển sinh không?`,
+
+        `💻 **IT tại FPT Polytechnic - Nơi ươm mầm lập trình viên!**
+
+🔥 **Tại sao chọn IT:**
+• Ngành có nhu cầu tuyển dụng cao nhất
+• Mức lương khởi điểm hấp dẫn
+• Cơ hội làm việc remote, freelance
+• Phát triển sự nghiệp nhanh
+
+🛠️ **Công nghệ được học:**
+ReactJS, NodeJS, Flutter, Docker, AWS...
+
+Bạn đã có kiến thức lập trình nào chưa? Tôi có thể tư vấn lộ trình phù hợp!`
+      ];
+      return itResponses[Math.floor(Math.random() * itResponses.length)];
     }
 
-    // Default response
-    return `Xin chào! Tôi là AI tư vấn của FPT Polytechnic. 
+    // Random encouraging responses for unclear messages
+    const randomResponses = [
+      `🌟 Tôi hiểu bạn đang tìm hiểu về định hướng học tập. Hãy chia sẻ với tôi: bạn thích làm gì trong thời gian rảnh? Từ đó tôi có thể tư vấn ngành học phù hợp nhất!`,
+      
+      `💡 Mỗi ngành học đều có những điểm thú vị riêng! Bạn có thể kể cho tôi nghe về những môn học yêu thích ở trường không? Tôi sẽ gợi ý ngành phù hợp!`,
+      
+      `🎯 Để tư vấn chính xác nhất, bạn có thể cho tôi biết: bạn là người thích sáng tạo, tính toán, hay giao tiếp? Mỗi tính cách sẽ phù hợp với những ngành khác nhau!`,
+      
+      `🚀 FPT Polytechnic có nhiều ngành hot như IT, Thiết kế, Marketing... Bạn muốn biết ngành nào có mức lương cao nhất? Hay cơ hội việc làm tốt nhất?`
+    ];
 
-Tôi có thể giúp bạn về:
-🎓 Các ngành học: IT, Thiết kế, Marketing, Kế toán, Quản trị KD
-📋 Thông tin tuyển sinh
-💼 Cơ hội nghề nghiệp
-📞 Tư vấn định hướng
-
-Bạn muốn tìm hiểu về ngành nào? Hãy hỏi tôi nhé!`;
+    return randomResponses[Math.floor(Math.random() * randomResponses.length)];
   }
 }

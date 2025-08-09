@@ -9,48 +9,54 @@ const Header: React.FC = () => {
   };
 
   return (
-    <header className="bg-white shadow-sm border-b border-gray-200">
+    <header className="bg-white/95 backdrop-blur-sm shadow-lg border-b border-gray-100 sticky top-0 z-50">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link to="/" className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-green-500 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">AI</span>
+          <Link to="/" className="flex items-center space-x-3 group">
+            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 via-purple-500 to-green-500 rounded-xl flex items-center justify-center transform group-hover:scale-110 transition-all duration-300 shadow-lg">
+              <span className="text-white font-bold text-lg">🤖</span>
             </div>
-            <span className="text-xl font-bold text-gray-800">AI4Life</span>
+            <div className="flex flex-col">
+              <span className="text-xl font-bold text-gray-800 group-hover:text-blue-600 transition-colors">AI4Life</span>
+              <span className="text-xs text-gray-500 -mt-1">Career Advisor</span>
+            </div>
           </Link>
 
           {/* Navigation */}
-          <nav className="hidden md:flex items-center space-x-8">
+          <nav className="hidden md:flex items-center space-x-2">
             <Link
               to="/"
-              className={`text-sm font-medium transition-colors duration-200 ${
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center space-x-2 ${
                 isActive('/') 
-                  ? 'text-blue-600 border-b-2 border-blue-600 pb-1' 
-                  : 'text-gray-600 hover:text-blue-600'
+                  ? 'bg-blue-100 text-blue-700 shadow-md' 
+                  : 'text-gray-600 hover:text-blue-600 hover:bg-blue-50'
               }`}
             >
-              Trang chủ
+              <span>🏠</span>
+              <span>Trang chủ</span>
             </Link>
             <Link
               to="/survey"
-              className={`text-sm font-medium transition-colors duration-200 ${
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center space-x-2 ${
                 isActive('/survey') 
-                  ? 'text-blue-600 border-b-2 border-blue-600 pb-1' 
-                  : 'text-gray-600 hover:text-blue-600'
+                  ? 'bg-green-100 text-green-700 shadow-md' 
+                  : 'text-gray-600 hover:text-green-600 hover:bg-green-50'
               }`}
             >
-              Khảo sát
+              <span>📋</span>
+              <span>Khảo sát</span>
             </Link>
             <Link
               to="/chat"
-              className={`text-sm font-medium transition-colors duration-200 ${
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center space-x-2 ${
                 isActive('/chat') 
-                  ? 'text-blue-600 border-b-2 border-blue-600 pb-1' 
-                  : 'text-gray-600 hover:text-blue-600'
+                  ? 'bg-purple-100 text-purple-700 shadow-md' 
+                  : 'text-gray-600 hover:text-purple-600 hover:bg-purple-50'
               }`}
             >
-              Chat AI
+              <span>💬</span>
+              <span>Chat AI</span>
             </Link>
           </nav>
 
